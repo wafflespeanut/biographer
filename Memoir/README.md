@@ -1,0 +1,3 @@
+### Nothing much. Just for optimizing one of my projects...
+
+There's a function in my diary ([originally written in Python](https://github.com/Wafflespeanut/Python/tree/master/Memoir)) which is quite slow, because it involves decrypting & searching a lot of files, and so it takes time in Python (being a high-level language). I'm trying to link it to Rust, which (I hope) will reduce the running time.

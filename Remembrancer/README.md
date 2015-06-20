@@ -1,3 +1,0 @@
-### Nothing much. Just for learning Rust...
-
-This is merely a translation of my diary ([originally written in Python](https://github.com/Wafflespeanut/Python/tree/master/Remembrancer)) to Rust, solely for my own learning purposes.
