@@ -5,6 +5,9 @@ use std::fs::File;
 use std::collections::HashMap;
 use serialize::hex::{FromHex, ToHex};
 
+// It's not a library yet! This is only for live testing
+// This will soon become a library and will have tests on it
+
 // Hexing function
 fn hexed(encode: &str) -> String {
     // only as a helper function
