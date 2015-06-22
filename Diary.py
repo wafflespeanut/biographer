@@ -7,21 +7,6 @@ from hashlib import md5, sha256
 
 ploc = os.path.expanduser('~') + os.sep + '.diary'              # Config location
 
-months = {
-    '01': 'January',
-    '02': 'February',
-    '03': 'March',
-    '04': 'April',
-    '05': 'May',
-    '06': 'June',
-    '07': 'July',
-    '08': 'August',
-    '09': 'September',
-    '10': 'October',
-    '11': 'November',
-    '12': 'December'
-}
-
 def hexed(text):                                                # Hexing function
     return map(lambda i:
         format(ord(i), '02x'), list(text))
@@ -70,8 +55,9 @@ def zombify(mode, data, key):                                   # Linking helper
         text = shift(CXOR(data, key), 256 - ch)
         return char(text)
 
-def temp(File, key):                                            # Decrypts and prints the story on the screen
-    if protect(File, 'd', key):
+def temp(fileTuple, key):                                       # Decrypts and prints the story on the screen
+    if protect(fileTuple[0], 'd', key):
+        print fileTuple[1]
         with open(loc + 'TEMP.tmp', 'r') as file:
             data = file.readlines()
         print "\n<----- START OF STORY ----->\n"
@@ -96,7 +82,7 @@ def check():                                                    # Allows passwor
                     print "\nPasswords don't match!"
             hashedKey = hashed(sha256, key)
             with open(ploc, 'w') as file:
-                file.writelines([hashedKey])
+                file.writelines([hashedKey + '\n'])
             print '\nLogin credentials have been saved locally!'
         except KeyboardInterrupt:
             print "\nInterrupted! Couldn't store login credentials!"
@@ -104,7 +90,7 @@ def check():                                                    # Allows passwor
     else:
         try:
             with open(ploc, 'r') as file:
-                hashedKey = file.readlines()[0]
+                hashedKey = file.readlines()[0][:-1]
             key = getpass('\nEnter your password to continue: ')
             if not hashedKey == hashed(sha256, key):            # Fails if the password doesn't match with the credential
                 print 'Wrong password!'
@@ -131,7 +117,7 @@ def protect(path, mode, key):                                   # A simple metho
 
 def write(key, File = None):                                    # Does the dirty writing job
     if not File:
-        date = hashed(md5, 'Day ' + time('%d') + ' (' + months[time('%m')] + ' ' + time('%Y') + ')')
+        date = hashed(md5, 'Day ' + time('%d') + ' (' + time('%B') + ' ' + time('%Y') + ')')
         if not date:
             return key
         File = loc + date
@@ -173,11 +159,11 @@ def hashDate(year = None, month = None, day = None):            # Return a path 
                 month = raw_input('\nMonth: ')
             if not day:
                 day = raw_input('\nDay: ')
-            date = str(datetime(int(year), int(month), int(day)).date()).split('-')
+            date = datetime(int(year), int(month), int(day)).date()
             if date:
-                year = date[0]
-                month = months[date[1]]
-                day = date[2]
+                year = date.strftime('%Y')
+                month = date.strftime('%B')
+                day = date.strftime('%d')
                 break
         except Exception as err:
             print "An error occurred:", err
@@ -185,21 +171,54 @@ def hashDate(year = None, month = None, day = None):            # Return a path 
             continue
     fileName = loc + hashed(md5, 'Day ' + day + ' (' + month + ' ' + year + ')')
     if not os.path.exists(fileName):
-        print '\nNo stories on {} {}, {}.'.format(month, day, year)
+        print '\nNo stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
         return None
-    return fileName
+    story = '\nChoosing your story from {date:%B} {date:%d}, {date:%Y} ({date:%A})...'.format(date = date)
+    return fileName, story
 
 def random(key):                                                # Useful only when you have a lot of stories (obviously)
     stories = len(os.listdir(loc))
     while True:
         ch = rchoice(range(stories))
-        d = datetime(2014, 12, 13).date() + timedelta(days = ch)
+        d = datetime(2014, 12, 13).date() + timedelta(days = ch)    # Happy Birthday, Diary!
         fileName = hashDate(d.year, d.month, d.day)
         if fileName:
             break
-    d = str(d).split('-')
-    print '\nChoosing your story from %s %s, %s...' % (months[d[1]], d[2], d[0])
     return temp(fileName, key)
+
+def configure(delete = False):
+    try:
+        choice = 'y'
+        if os.path.exists(ploc) and not delete:
+            print 'Configuration file found!'
+            with open(ploc, 'r') as file:
+                config = file.readlines()
+            if len(config) > 1:
+                loc = config[1]
+                key = check()
+                if type(key) is not str:
+                    return None, None, 'n'
+            else:
+                delete = True
+        if delete:
+            print 'Deleting configuration file...'
+            os.remove(ploc)
+        if not os.path.exists(ploc):
+            print "\nLet's start configuring your diary..."
+            loc = raw_input('Enter the (absolute) location for your diary: ')
+            while not os.path.exists(loc):
+                print 'No such path exists!'
+                loc = raw_input('Please enter a valid path: ')
+            if loc[-1] is not os.sep:
+                loc += os.sep
+            key = check()
+            if type(key) is not str:
+                return None, None, 'n'
+            with open(ploc, 'a') as file:
+                file.writelines([loc])                          # Store the location along with the password hash
+    except KeyboardInterrupt:
+        return None, None, 'n'
+    return loc, key, choice
 
 def search(key):                                                # Quite an interesting function for searching
     word = raw_input("Enter a word: ")
@@ -228,7 +247,7 @@ def search(key):                                                # Quite an inter
     printed = False
     for i in range(delta):
         d = d1 + timedelta(days = i)
-        File = hashDate(d.year, d.month, d.day)
+        File = hashDate(d.year, d.month, d.day)[0]
         if File == None:
             continue
         progress = int((float(i + 1) / delta) * 100)
@@ -250,71 +269,48 @@ def search(key):                                                # Quite an inter
         if not printed:
             print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(fileData[1]))
             printed = True
-    r1 = str(d1.date()).split('-')
-    r2 = str(d2.date()).split('-')
-    ranges = months[r1[1]], r1[2], r1[0], months[r2[1]], r2[2], r2[0]
-    print "\nSearch results from %s %s, %s to %s %s, %s" % ranges
+    print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}.".format(d1 = d1, d2 = d2)
     if fileData[1]:
         print "\nStories on these days have the word '%s' in them...\n" % word
     else:
         print '\nBad luck! Nothing...'
     for i, delta in enumerate(fileData[0]):
-        d = str(datetime(d1.year, d1.month, d1.day).date() + timedelta(days = delta)).split('-')
-        print '%d. %s %s, %s' % (i + 1, months[d[1]], d[2], d[0])
+        d = datetime(d1.year, d1.month, d1.day).date() + timedelta(days = delta)
+        print '%d. %s %s, %s' % (i + 1, d.strftime('%B'), d.day, d.year)
     print '\nFound %d occurrences in %d stories!' % (sum(fileData[1]), len(fileData[0]))
     os.remove(loc + 'TEMP.tmp')
     while fileData[2]:
         try:
-            ch = int(raw_input('Enter a number to open the corresponding story: '))
+            ch = int(raw_input('Enter a number to see the corresponding story: '))
             temp(fileData[2][ch-1], key)
         except Exception:
             print '\nOops! Bad input...\n'
 
 if __name__ == '__main__':
-    choice = 'y'
-    key = None
-    if os.path.exists(ploc):
-        print 'Configuration file found!'
-        with open(ploc, 'r') as file:
-            config = file.readlines()
-        if len(loc) > 1:
-            loc = config[1]
-        else:
-            print 'Deleting invalid configuration file...'
-            os.remove(ploc)
-        key = check()
-        if type(key) is not str:
-            choice = 'n'
-    if not os.path.exists(ploc):
-        print "Let's start configuring your diary..."
-        loc = raw_input('Enter the location for your diary: ')
-        while not os.path.exists(loc):
-            print 'No such path exists!'
-            loc = raw_input('Please enter a valid path: ')
-        key = check()
-        if type(key) is not str:
-            choice = 'n'
-        with open(ploc, 'a') as file:
-            file.writelines([loc])                              # Store the location along with the password hash
+    loc, key, choice = configure()
     while choice is 'y':
         if os.path.exists(loc + 'TEMP.tmp'):
             os.remove(loc + 'TEMP.tmp')
         try:
+            print '\n### This program runs best in command prompt ###'
             choices = ('\n\tWhat do you wanna do?\n',
                 " 1: Write today's story",
                 " 2: Random story",
                 " 3: View the story of someday",
                 " 4. Write the story for someday you've missed",
-                " 5. Search your stories",)
+                " 5. Search your stories",
+                " 6. Reconfigure your diary",)
             print '\n\t\t'.join(choices)
             choice = raw_input('\nChoice: ')
-            ch = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)']
+            ch = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate()[0])', 'search(key)', 'configure(True)']
             try:
                 key = eval(ch[int(choice)-1])                   # Remembers the password throughout the session
-            except Exception:                                   # But, you have to sign-in for each session
-                print '\nAh, something bad has happened! Did you do it?'
+            except Exception as err:                                   # But, you have to sign-in for each session
+                print err
+                print "\nAh, you've failed to authenticate! Let's try it once more... (or reconfigure your diary)"
+                loc, key, choice = configure()
             choice = raw_input('\nDo something again (y/n)? ')
         except KeyboardInterrupt:
             choice = raw_input('\nInterrupted! Do something again (y/n)? ')
-    if choice is 'n':
-        print 'Goodbye...'
+    if choice is not 'y':
+        print '\nGoodbye...'
