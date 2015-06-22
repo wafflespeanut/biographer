@@ -10,7 +10,7 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 
 ### Notes
 
-Currently, I'm trying to minimize the time it takes to search. Since Python is high-level, I'm planning to link it to a Rust library which (I hope) will be damn fast! And, this will soon become command-line.
+Currently, I'm trying to minimize the time it takes to search. Since Python is high-level, I'm planning to link it to a Rust library which (I hope) will be damn fast! And, this will soon become command-line. I also have some future plans to make use of a secure cipher and put the stories into a database.
 
 ### Changelog
 
@@ -18,7 +18,9 @@ v0.4.0: Memoir
 - Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR.
 - No longer depends on text editors. It just prints the stories on the screen.
 - No longer stores passwords, but hashes them (with SHA-256) to allow authentication for a particular session (which means you have to sign-in at the start of every session). While local password storage appeals our minds, it's a *really* bad move!
-- Functions: `hashed(), shift(), CXOR(), temp(), protect(), write(), random(), diary()`
+- Hashed passwords & diary location is stored in a configuration file
+- Improved custom date & time with builtin datetime objects
+- Functions: `hashed(), shift(), CXOR(), temp(), protect(), write(), random()`
 
 v0.3.0: [Remembrancer](https://github.com/Wafflespeanut/scripts/tree/be3b51c14c5e708baa4003adf3346f51f5720529/Remembrancer)
 - Smart search for specific words in stories

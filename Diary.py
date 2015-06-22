@@ -5,12 +5,7 @@ from time import strftime as time
 from datetime import datetime, timedelta
 from hashlib import md5, sha256
 
-if '/bin' in os.path.defpath:
-    ploc = os.path.expanduser('~') + '/.diary'
-    loc = os.path.expanduser('~/Desktop') + '/Desktop/Dropbox/Diary/'
-else:
-    ploc = os.path.expanduser('~') + '\\AppData\\Local\\TEMP.DAT'           # Config location
-    loc = os.path.expanduser('~') + '\\Desktop\\Dropbox\\Diary\\'           # Storage location
+ploc = os.path.expanduser('~') + os.sep + '.diary'              # Config location
 
 months = {
     '01': 'January',
@@ -31,9 +26,9 @@ def hexed(text):                                                # Hexing functio
     return map(lambda i:
         format(ord(i), '02x'), list(text))
 
-def hashed(hashFunction, stuff):                                # Hashing function (could be MD5 or SHA-256)
+def hashed(hashFunction, text):                                 # Hashing function (could be MD5 or SHA-256)
     hashObject = hashFunction()
-    hashObject.update(stuff)
+    hashObject.update(text)
     return hashObject.hexdigest()
 
 def char(text):                                                 # Hex-decoding function
@@ -104,8 +99,8 @@ def check():                                                    # Allows passwor
                 file.writelines([hashedKey])
             print '\nLogin credentials have been saved locally!'
         except KeyboardInterrupt:
-            print "\nCouldn't store login credentials!"
-            return None
+            print "\nInterrupted! Couldn't store login credentials!"
+            return True
     else:
         try:
             with open(ploc, 'r') as file:
@@ -116,7 +111,7 @@ def check():                                                    # Allows passwor
                 return None
         except KeyboardInterrupt:
             print 'Failed to authenticate!'
-            return None
+            return True
     return key
 
 def protect(path, mode, key):                                   # A simple method which shifts and turns it to hex!
@@ -127,7 +122,7 @@ def protect(path, mode, key):                                   # A simple metho
         return key
     data = zombify(mode, ''.join(data), key)
     if not data:
-        print '\n\tWrong password!'                         # Indicates failure while decrypting
+        print '\n\tWrong password!'                             # Indicates failure while decrypting
         return None
     File = (path if mode in ('e', 'w') else (loc + 'TEMP.tmp') if mode == 'd' else None)
     with open(File, 'w') as file:
@@ -226,8 +221,8 @@ def search(key):                                                # Quite an inter
             continue
         break
     delta = (d2 - d1).days
-    print '\nDecrypting %d stories sequentially...' % delta     # Exhaustive process requires a low-level language
-    print '\nSit back & relax... (May take some time)\n'        # That's why I'm learning Rust by translating this...
+    print '\nDecrypting %d stories sequentially...' % delta     # Exhaustive process might do better with a low-level language
+    print '\nSit back & relax... (May take some time)\n'        # That's why I'm writing a Rust library for this...
     fileData = [], [], []
     displayProg = 0
     printed = False
@@ -249,9 +244,9 @@ def search(key):                                                # Quite an inter
             print 'Cannot decrypt story! Skipping...'
             continue
         if occurred:
-            fileData[0].append(i)
-            fileData[1].append(occurred)
-            fileData[2].append(File)
+            fileData[0].append(i)                               # difference between two days (timedelta object)
+            fileData[1].append(occurred)                        # how many times the word has occurred
+            fileData[2].append(File)                            # file path (so that it can be easily opened later)
         if not printed:
             print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(fileData[1]))
             printed = True
@@ -278,6 +273,29 @@ def search(key):                                                # Quite an inter
 if __name__ == '__main__':
     choice = 'y'
     key = None
+    if os.path.exists(ploc):
+        print 'Configuration file found!'
+        with open(ploc, 'r') as file:
+            config = file.readlines()
+        if len(loc) > 1:
+            loc = config[1]
+        else:
+            print 'Deleting invalid configuration file...'
+            os.remove(ploc)
+        key = check()
+        if type(key) is not str:
+            choice = 'n'
+    if not os.path.exists(ploc):
+        print "Let's start configuring your diary..."
+        loc = raw_input('Enter the location for your diary: ')
+        while not os.path.exists(loc):
+            print 'No such path exists!'
+            loc = raw_input('Please enter a valid path: ')
+        key = check()
+        if type(key) is not str:
+            choice = 'n'
+        with open(ploc, 'a') as file:
+            file.writelines([loc])                              # Store the location along with the password hash
     while choice is 'y':
         if os.path.exists(loc + 'TEMP.tmp'):
             os.remove(loc + 'TEMP.tmp')
@@ -289,21 +307,14 @@ if __name__ == '__main__':
                 " 4. Write the story for someday you've missed",
                 " 5. Search your stories",)
             print '\n\t\t'.join(choices)
-            if os.path.exists(ploc):
-                print '\t\t 0: Sign out'
             choice = raw_input('\nChoice: ')
             ch = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)']
-            if choice == '0' and os.path.exists(ploc):
-                os.remove(ploc)
-                print 'Login credentials have been removed!'
-                key = None
-            else:
-                while not key:                                  # Remembers the password throughout the session
-                    key = check()                               # But, you have to sign-in for each session
-                try:
-                    key = eval(ch[int(choice)-1])
-                except Exception:
-                    print '\nAh, something bad has happened! Did you do it?'
+            try:
+                key = eval(ch[int(choice)-1])                   # Remembers the password throughout the session
+            except Exception:                                   # But, you have to sign-in for each session
+                print '\nAh, something bad has happened! Did you do it?'
             choice = raw_input('\nDo something again (y/n)? ')
         except KeyboardInterrupt:
             choice = raw_input('\nInterrupted! Do something again (y/n)? ')
+    if choice is 'n':
+        print 'Goodbye...'
