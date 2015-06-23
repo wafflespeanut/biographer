@@ -20,7 +20,7 @@ v0.4.0: Memoir
 - No longer stores passwords, but hashes them (with SHA-256) to allow authentication for a particular session (which means you have to sign-in at the start of every session). While local password storage appeals our minds, it's a *really* bad move!
 - Hashed passwords & diary location is stored in a configuration file
 - Improved custom date & time with builtin datetime objects
-- Functions: `hashed(), shift(), CXOR(), temp(), protect(), write(), random()`
+- Functions: `hashed(), shift(), CXOR(), temp(), protect(), write(), random(), search()`
 
 v0.3.0: [Remembrancer](https://github.com/Wafflespeanut/scripts/tree/be3b51c14c5e708baa4003adf3346f51f5720529/Remembrancer)
 - Smart search for specific words in stories

@@ -1,7 +1,6 @@
 import os
 from random import choice as rchoice
 from getpass import getpass
-from time import strftime as time
 from datetime import datetime, timedelta
 from hashlib import md5, sha256
 
@@ -22,6 +21,8 @@ def char(text):                                                 # Hex-decoding f
         return ''.join(i.decode('hex') for i in split)
     except TypeError:
         return None
+
+# use a random seed here...
 
 def CXOR(text, key):                                            # Byte-wise XOR
     def xor(char1, char2):
@@ -115,12 +116,13 @@ def protect(path, mode, key):                                   # A simple metho
         file.writelines([data])
     return key
 
-def write(key, File = None):                                    # Does the dirty writing job
-    if not File:
-        date = hashed(md5, 'Day ' + time('%d') + ' (' + time('%B') + ' ' + time('%Y') + ')')
-        if not date:
-            return key
-        File = loc + date
+def write(key, fileTuple = None):                               # Does the dirty writing job
+    if not fileTuple:
+        now = datetime.now()                                    # For illegal dates, you'll be ending up writing today's story
+        date = hashed(md5, 'Day ' + now.strftime('%d') + ' (' + now.strftime('%B') + ' ' + now.strftime('%Y') + ')')
+        story = '\nYour story from {date:%B} {date:%d}, {date:%Y} ({date:%A})...'.format(date = now)
+        fileTuple = (loc + date, story)
+    File = fileTuple[0]
     if os.path.exists(File) and os.path.getsize(File):
         key = protect(File, 'w', key)                           # Intentionally decrypting the original file
         if not key:                                             # It's an easy workaround to modify your original story
@@ -147,7 +149,7 @@ def write(key, File = None):                                    # Does the dirty
     key = protect(File, 'e', key)
     ch = raw_input('\nSuccessfully written to file! Do you wanna see it (y/n)? ')
     if ch == 'y':
-        temp(File, key)
+        temp(fileTuple, key)
     return key
 
 def hashDate(year = None, month = None, day = None):            # Return a path based on (day, month, year) input
@@ -172,9 +174,9 @@ def hashDate(year = None, month = None, day = None):            # Return a path 
     fileName = loc + hashed(md5, 'Day ' + day + ' (' + month + ' ' + year + ')')
     if not os.path.exists(fileName):
         print '\nNo stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
-        return None
+        return None                                             # So, you can't write stories for illegal dates!
     story = '\nChoosing your story from {date:%B} {date:%d}, {date:%Y} ({date:%A})...'.format(date = date)
-    return fileName, story
+    return fileName, story                                      # This will be useful for displaying the date of story
 
 def random(key):                                                # Useful only when you have a lot of stories (obviously)
     stories = len(os.listdir(loc))
@@ -302,11 +304,11 @@ if __name__ == '__main__':
                 " 6. Reconfigure your diary",)
             print '\n\t\t'.join(choices)
             choice = raw_input('\nChoice: ')
-            ch = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate()[0])', 'search(key)', 'configure(True)']
+            ch = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
             try:
                 key = eval(ch[int(choice)-1])                   # Remembers the password throughout the session
-            except Exception as err:                                   # But, you have to sign-in for each session
-                print err
+            except Exception as err:                            # But, you have to sign-in for each session
+                # print err                                     # Might be useful for detecting propagating errors...
                 print "\nAh, you've failed to authenticate! Let's try it once more... (or reconfigure your diary)"
                 loc, key, choice = configure()
             choice = raw_input('\nDo something again (y/n)? ')
