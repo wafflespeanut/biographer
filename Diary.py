@@ -303,10 +303,10 @@ if __name__ == '__main__':
                 " 5. Search your stories",
                 " 6. Reconfigure your diary",)
             print '\n\t\t'.join(choices)
-            choice = raw_input('\nChoice: ')
-            ch = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
+            ch = raw_input('\nChoice: ')
+            options = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
             try:
-                key = eval(ch[int(choice)-1])                   # Remembers the password throughout the session
+                key = eval(options[int(ch)-1])                   # Remembers the password throughout the session
             except Exception as err:                            # But, you have to sign-in for each session
                 # print err                                     # Might be useful for detecting propagating errors...
                 print "\nAh, you've failed to authenticate! Let's try it once more... (or reconfigure your diary)"
