@@ -2,7 +2,6 @@ extern crate rustc_serialize as serialize;
 
 use std::io::Read;
 use std::fs::File;
-use std::collections::HashMap;
 use serialize::hex::{FromHex, ToHex};
 
 // Not a library yet! Only for live testing
@@ -88,30 +87,14 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
 }
 
 fn main() {
-    let mut months = HashMap::new();
-    // sigh, no other efficient way...
-    months.insert("01", "January");
-    months.insert("02", "February");
-    months.insert("03", "March");
-    months.insert("04", "April");
-    months.insert("05", "May");
-    months.insert("06", "June");
-    months.insert("07", "July");
-    months.insert("08", "August");
-    months.insert("09", "September");
-    months.insert("10", "October");
-    months.insert("11", "November");
-    months.insert("12", "December");
 
-    let text: Vec<u8> = vec![104, 101, 108, 108, 111];
+    // let text: Vec<u8> = vec![104, 101, 108, 108, 111];
     // let put_in = zombify(1, &text, "pass123");
     // println!("{:?}", put_in);
     // let file_path = "/home/wafflespeanut/Desktop/stuff";
     // let put_in = fopen(file_path).1;
     // let got_back = charred(zombify(0, &put_in, "pass123"));
     // println!("{:?}", got_back);
-    println!("{:?}", search(&text, "hello"));
-    // for i in 0..text.len() {
-    //     println!("{:?}", &text[i..text.len()].starts_with(&t));
-    // }
+    // println!("{:?}", search(&text, "hello"));
+    
 }
