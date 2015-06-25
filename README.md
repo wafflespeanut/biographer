@@ -16,12 +16,17 @@ Currently, I'm trying to minimize the time it takes to search. Since Python is h
 
 <sup>Most of the commits are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat usable. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-v0.4.0: Memoir
+v0.4.1: Anecdote
+- Improved search to suit the methods of both Python & Rust
+- Replaced the exhaustive date & time with builtin datetime objects
+- Hashed password & diary location is stored in a configuration file
+- <s>Now, the script can be linked to a Rust library to speed up the search</s>
+- Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp()`
+
+v0.4.0: [Memoir](https://github.com/Wafflespeanut/Memoir/tree/efc7cd4b15b1840c6b8d0a7c494690834e987cbe)
 - Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR.
 - No longer depends on text editors. It just prints the stories on the screen.
-- No longer stores passwords, but hashes them (with SHA-256) to allow authentication for a particular session (which means you have to sign-in at the start of every session). While local password storage appeals our minds, it's a *really* bad move!
-- Hashed passwords & diary location is stored in a configuration file
-- Improved custom date & time with builtin datetime objects
+- No longer stores passwords, but hashes them (with SHA-256) to allow authentication for a particular session (which means you have to sign-in at the start of every session). While local password storage appeals our minds, it was a *really* bad move!
 - Functions: `hashed(), shift(), CXOR(), temp(), protect(), write(), random(), search()`
 
 v0.3.0: [Remembrancer](https://github.com/Wafflespeanut/scripts/tree/be3b51c14c5e708baa4003adf3346f51f5720529/Remembrancer)

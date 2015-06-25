@@ -59,7 +59,7 @@ def zombify(mode, data, key):                                   # Linking helper
 def temp(fileTuple, key):                                       # Decrypts and prints the story on the screen
     if type(fileTuple) == tuple:
         if protect(fileTuple[0], 'd', key):
-            print fileTuple[1]
+            print 'Your story from', fileTuple[1], '...'
             with open(loc + 'TEMP.tmp', 'r') as file:
                 data = file.readlines()
             print "\n<----- START OF STORY ----->\n"
@@ -125,7 +125,7 @@ def write(key, fileTuple = None):                               # Does the dirty
     if not fileTuple:
         now = datetime.now()
         date = hashed(md5, 'Day ' + now.strftime('%d') + ' (' + now.strftime('%B') + ' ' + now.strftime('%Y') + ')')
-        story = '\nYour story from {date:%B} {date:%d}, {date:%Y} ({date:%A})...'.format(date = now)
+        story = '\nYour story from {date:%B} {date:%d}, {date:%Y} ({date:%A}) ...'.format(date = now)
         fileTuple = (loc + date, story)
     elif type(fileTuple) == str:
         return key
@@ -186,7 +186,7 @@ def hashDate(year = None, month = None, day = None):            # Return a path 
             return 'blah'                                       # So, you can't write stories for illegal dates!
         print '\nNo stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
         return None
-    story = '\nChoosing your story from {date:%B} {date:%d}, {date:%Y} ({date:%A})...'.format(date = date)
+    story = '{date:%B} {date:%d}, {date:%Y} ({date:%A})'.format(date = date)
     return fileName, story                                      # This will be useful for displaying the date of story
 
 def findStory(delta, date = datetime(2014, 12, 13)):       # Finds the file name using the timedelta from the birth of the diary to a specified date
@@ -241,21 +241,22 @@ def configure(delete = False):                                  # Configuration 
     return loc, key, choice
 
 def grabStories(delta, date):                                   # Grabs the story paths for a given datetime and timedelta objects
-    files = []
+    fileData = [], []
     for i in range(delta):
         fileName = findStory(i, date)
         if fileName == None:
             continue
-        files.append(fileName[0])
-    return files
+        fileData[0].append(fileName[0])
+        fileData[1].append(fileName[1])
+    return fileData
 
-def search(key, files, word):
-    print '\nDecrypting %d stories...' % delta                  # Exhaustive process might do better with a low-level language
-    fileData = []                                               # That's why I'm writing a Rust library for this...
+def pySearch(key, files, word):                                 # Exhaustive process might do better with a low-level language
+    occurrences = []                                            # That's why I'm writing a Rust library for this...
     displayProg = 0
     printed = False
+    total = len(files)
     for i, File in enumerate(files):
-        progress = int((float(i + 1) / delta) * 100)
+        progress = int((float(i + 1) / total) * 100)
         if progress is not displayProg:
             displayProg = progress
             printed = False
@@ -265,17 +266,14 @@ def search(key, files, word):
                 data = file.readlines()
             occurred = ''.join(data).count(word)
         else:
-            print 'Cannot decrypt story! Skipping...'
-            continue
-        if occurred:
-            fileData[0].append(i)                               # difference between two days (timedelta object)
-            fileData[1].append(occurred)                        # and how many times the word has occurred
+            print 'Cannot decrypt story! Skipping... (filename hash: %s)' % File.split(os.sep)[-1]
+        occurrences.append(occurred)                            # how many times the word has occurred
         if not printed:
-            print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(fileData[1]))
+            print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(occurrences))
             printed = True
-    return fileData
+    return occurrences
 
-def pySearch(key):
+def search(key):
     word = raw_input("Enter a word: ")
     choice = int(raw_input("\n\t1. Search everything!\n\t2. Search between two dates\n\nChoice: "))
     if choice == 1:
@@ -295,22 +293,23 @@ def pySearch(key):
             continue
         break
     delta = (d2 - d1).days
-    files = grabStories(delta, d1)
-    fileData = search(key, files, word)
+    print '\nDecrypting %d stories...\n' % delta
+    files = grabStories(delta, d1)                              # has both file location and the formatted datetime
+    fileData = pySearch(key, files[0], word)
     print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}.".format(d1 = d1, d2 = d2)
-    if fileData[1]:
+    if sum(fileData):
         print "\nStories on these days have the word '%s' in them...\n" % word
     else:
-        print '\nBummer! Nothing...'
-    for i, delta in enumerate(fileData[0]):
-        d = datetime(d1.year, d1.month, d1.day).date() + timedelta(days = delta)
-        print '%d. %s %s, %s' % (i + 1, d.strftime('%B'), d.day, d.year)
-    print '\nFound %d occurrences in %d stories!' % (sum(fileData[1]), len(fileData[0]))
+        print '\nBummer! Nothing...'                            # splitting into pairs (below)
+    results = [(files[0][i], files[1][i]) for i, count in enumerate(fileData) if count]
+    for i, data in enumerate(results):
+        print str(i + 1) + '. ' + data[1]                       # print only the datetime
+    print '\nFound %d occurrences in %d stories!' % (sum(fileData), len(results))
     os.remove(loc + 'TEMP.tmp')
     while files:
         try:
-            ch = int(raw_input('Enter a number to see the corresponding story: '))
-            temp(files[ch-1], key)
+            ch = int(raw_input('Enter the number to see the corresponding story: '))
+            temp((results[ch-1][0], results[ch-1][1]), key)
         except Exception:
             print '\nOops! Bad input...\n'
     return key
@@ -343,9 +342,7 @@ if __name__ == '__main__':
             try:
                 key = eval(options[int(ch)-1])                  # just to remember the password throughout the session
             except Exception as err:                            # But, you have to sign-in for each session!
-                print err                                     # for detecting propagated errors and catching them at their origin...
-                print "\nAh, you've failed to authenticate! Let's try it once more... (or reconfigure your diary)"
-                loc, key, choice = configure()
+                print "\nAh, something bad has happened! Did you do it?"
             choice = raw_input('\nDo something again (y/n)? ')
         except KeyboardInterrupt:
             choice = raw_input('\nInterrupted! Do something again (y/n)? ')
