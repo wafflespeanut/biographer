@@ -1,10 +1,10 @@
 extern crate rustc_serialize as serialize;
 
 use std::io::Read;
-use std::fs::File;
+use std::fs::{File, read_dir};
+use std::path::PathBuf;
 use serialize::hex::{FromHex, ToHex};
 
-// Not a library yet! Only for live testing
 // Will soon become one and will have tests on it
 
 // Hexing function
@@ -22,7 +22,7 @@ fn charred(decode: Vec<u8>) -> Vec<u8> {
 }
 
 // Gives a vector of file contents
-fn fopen(path: &str) -> (usize, Vec<u8>) {
+fn fopen(path: &PathBuf) -> (usize, Vec<u8>) {
     let file = File::open(path);
     let mut contents: Vec<u8> = Vec::new();
     // of course, assuming that there won't be any problem in reading the file
@@ -86,15 +86,24 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
     } count
 }
 
-fn main() {
+// #[no_mangle]
+// pub extern fn input() {
 
-    // let text: Vec<u8> = vec![104, 101, 104, 101, 104, 101];
-    // let put_in = zombify(1, &text, "pass123");
-    // println!("{:?}", put_in);
-    // let file_path = "/home/wafflespeanut/Desktop/stuff";
-    // let put_in = fopen(file_path).1;
-    // let got_back = charred(zombify(0, &put_in, "pass123"));
-    // println!("{:?}", got_back);
-    // println!("{:?}", search(&text, "he"));
-    
+// }
+
+fn main() {
+    let p = "/path/to/Diary";
+    let mut total = 0;
+    let mut files: Vec<u8> = Vec::new();
+    let mut i = 0;
+    for entry in read_dir(&p).unwrap() {
+        // gives a PathBuf
+        let file_name = entry.unwrap().path();
+        let contents = fopen(&file_name).1;
+        let decrypted = charred(zombify(0, &contents, "key"));
+        let count = search(&decrypted, "query");
+        if count > 0 { files.push(i); }
+        i += 1;
+    }
+    println!("{:?}", (&files, files.len()));
 }

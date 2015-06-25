@@ -254,8 +254,7 @@ def search(key):                                                # Quite an inter
         break
     delta = (d2 - d1).days
     print '\nDecrypting %d stories sequentially...' % delta     # Exhaustive process might do better with a low-level language
-    print '\nSit back & relax... (May take some time)\n'        # That's why I'm writing a Rust library for this...
-    fileData = [], [], []
+    fileData = [], [], []                                       # That's why I'm writing a Rust library for this...
     displayProg = 0
     printed = False
     for i in range(delta):
@@ -305,7 +304,7 @@ if __name__ == '__main__':
         if os.path.exists(loc + 'TEMP.tmp'):
             os.remove(loc + 'TEMP.tmp')
         try:
-            print '\n### This program runs best in command prompt ###'
+            print '\n### This program runs best on Linux terminal ###'
             while True:
                 choices = ('\n\tWhat do you wanna do?\n',
                     " 1: Write today's story",
