@@ -10,9 +10,11 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 
 ### Notes
 
-Currently, I'm trying to minimize the time it takes to search. Since Python is high-level, I'm planning to link it to a Rust library which (I hope) will be damn fast! And, this will soon become command-line. I also have some future plans to make use of a secure cipher and put the stories into a database.
+Currently, I'm trying to minimize the time it takes to search. Since Python is high-level, I'm planning to link it to a Rust library which (I hope) will be damn fast! And, this will soon become command-line. I also have some future plans to make use of an open-source secure encryption scheme, a strong password hash, and put the stories into a database.
 
 ### Changelog
+
+<sup>Most of the commits are in the (`scripts`)[https://github.com/Wafflespeanut/scripts] repository. I moved it here once the diary became somewhat usable. In case you wanna check those out, I've provided the links for each version below.</sup>
 
 v0.4.0: Memoir
 - Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR.

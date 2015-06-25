@@ -22,7 +22,7 @@ def char(text):                                                 # Hex-decoding f
     except TypeError:
         return None
 
-# use a random seed here...
+# use a random seed and CBC here...
 
 def CXOR(text, key):                                            # Byte-wise XOR
     def xor(char1, char2):
@@ -36,7 +36,7 @@ def CXOR(text, key):                                            # Byte-wise XOR
             j = 0
     return ''.join(out)
 
-def shift(text, amount):                                        # Shifts the ASCII value of the chars (Vigenere cipher? Yep!)
+def shift(text, amount):                                        # Shifts the ASCII value of the chars (Caesar cipher? Yep!)
     try:
         shiftedText = ''
         for i, ch in enumerate(text):
@@ -142,8 +142,9 @@ def write(key, fileTuple = None):                               # Does the dirty
         stuff = raw_input("\nStart writing... (Press Ctrl+C when you're done!)\n\n\t")
         data.append(stuff)
     except KeyboardInterrupt:
-        print 'Nothing written! Quitting...'
-        key = protect(File, 'e', key)
+        print '\nNothing written! Quitting...'
+        if os.path.exists(File) and os.path.getsize(File):
+            key = protect(File, 'e', key)
         return key
     while True:
         try:
@@ -305,20 +306,28 @@ if __name__ == '__main__':
             os.remove(loc + 'TEMP.tmp')
         try:
             print '\n### This program runs best in command prompt ###'
-            choices = ('\n\tWhat do you wanna do?\n',
-                " 1: Write today's story",
-                " 2: Random story",
-                " 3: View the story of someday",
-                " 4. Write the story for someday you've missed",
-                " 5. Search your stories",
-                " 6. Reconfigure your diary",)
-            print '\n\t\t'.join(choices)
-            ch = raw_input('\nChoice: ')
+            while True:
+                choices = ('\n\tWhat do you wanna do?\n',
+                    " 1: Write today's story",
+                    " 2: Random story",
+                    " 3: View the story of someday",
+                    " 4. Write the story for someday you've missed",
+                    " 5. Search your stories",
+                    " 6. Reconfigure your diary",)
+                print '\n\t\t'.join(choices)
+                try:
+                    ch = int(raw_input('\nChoice: '))
+                    if ch in range(1, 7):
+                        break
+                    else:
+                        print '\n\tPlease enter a value between 0 and 6!'
+                except ValueError:
+                    print "\n\tC'mon, quit playing around and start writing..."
             options = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
             try:
-                key = eval(options[int(ch)-1])                  # Remembers the password throughout the session
-            except Exception as err:                            # But, you have to sign-in for each session
-                # print err                                     # might be useful for detecting propagated errors...
+                key = eval(options[int(ch)-1])                  # just to remember the password throughout the session
+            except Exception as err:                            # But, you have to sign-in for each session!
+                print err                                     # for detecting propagated errors and catching them at their origin...
                 print "\nAh, you've failed to authenticate! Let's try it once more... (or reconfigure your diary)"
                 loc, key, choice = configure()
             choice = raw_input('\nDo something again (y/n)? ')

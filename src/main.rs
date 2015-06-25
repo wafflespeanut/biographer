@@ -44,10 +44,10 @@ fn shift(text: &Vec<u8>, amount: u8) -> Vec<u8> {
 // Byte-wise XOR of vector elements according to a given string
 fn xor(text: &Vec<u8>, key: &str) -> Vec<u8> {
     let mut xorred: Vec<u8> = Vec::new();
-    let key_vector = key.to_string().into_bytes();
+    let key_array = key.as_bytes();
     let (mut i, mut j) = (0, 0);
     while i < text.len() {
-        xorred.push(text[i] ^ key_vector[j]);
+        xorred.push(text[i] ^ key_array[j]);
         i += 1; j += 1;
         if j == key.len() { j = 0; }
     } xorred
@@ -61,6 +61,7 @@ fn zombify(mode: u8, data: &Vec<u8>, key: &str) -> Vec<u8> {
         amount = amount.wrapping_add(*byte);
     } let mut text: Vec<u8> = data.clone();
     if mode == 1 {
+        // encrypt the thing
         text = data.to_hex().into_bytes();
         let shifted_text = shift(&text, amount);
         xor(&shifted_text, &key)
@@ -76,11 +77,10 @@ fn zombify(mode: u8, data: &Vec<u8>, key: &str) -> Vec<u8> {
 // Checks if the big vector contains the small vector slice
 fn search(text: &Vec<u8>, word: &str) -> u8 {
     let mut count: u8 = 0;
-    let word = word.to_string().into_bytes();
-    // Doesn't work if both vectors have the same elements
-    let length = text.len() - word.len();
+    let word_array = word.as_bytes();
+    let length = text.len() - word.len() + 1;
     for i in 0..length {
-        if text[i..length].starts_with(&word) {
+        if text[i..text.len()].starts_with(&word_array) {
             count += 1;
         }
     } count
@@ -88,13 +88,13 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
 
 fn main() {
 
-    // let text: Vec<u8> = vec![104, 101, 108, 108, 111];
+    // let text: Vec<u8> = vec![104, 101, 104, 101, 104, 101];
     // let put_in = zombify(1, &text, "pass123");
     // println!("{:?}", put_in);
     // let file_path = "/home/wafflespeanut/Desktop/stuff";
     // let put_in = fopen(file_path).1;
     // let got_back = charred(zombify(0, &put_in, "pass123"));
     // println!("{:?}", got_back);
-    // println!("{:?}", search(&text, "hello"));
+    // println!("{:?}", search(&text, "he"));
     
 }
