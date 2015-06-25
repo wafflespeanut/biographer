@@ -189,17 +189,24 @@ def hashDate(year = None, month = None, day = None):            # Return a path 
     story = '\nChoosing your story from {date:%B} {date:%d}, {date:%Y} ({date:%A})...'.format(date = date)
     return fileName, story                                      # This will be useful for displaying the date of story
 
+def findStory(delta, date = datetime(2014, 12, 13)):       # Finds the file name using the timedelta from the birth of the diary to a specified date
+    stories = len(os.listdir(loc))
+    d = date + timedelta(days = delta)
+    fileName = hashDate(d.year, d.month, d.day)
+    if not fileName:
+        return None
+    return fileName
+
 def random(key):                                                # Useful only when you have a lot of stories (obviously)
     stories = len(os.listdir(loc))
     while True:
         ch = rchoice(range(stories))
-        d = datetime(2014, 12, 13).date() + timedelta(days = ch)    # Happy Birthday, Diary!
-        fileName = hashDate(d.year, d.month, d.day)
+        fileName = findStory(ch)
         if fileName:
             break
     return temp(fileName, key)
 
-def configure(delete = False):
+def configure(delete = False):                                  # Configuration file for authentication
     try:
         choice = 'y'
         if os.path.exists(ploc) and not delete:
@@ -233,11 +240,46 @@ def configure(delete = False):
         return None, None, 'n'
     return loc, key, choice
 
-def search(key):                                                # Quite an interesting function for searching
+def grabStories(delta, date):                                   # Grabs the story paths for a given datetime and timedelta objects
+    files = []
+    for i in range(delta):
+        fileName = findStory(i, date)
+        if fileName == None:
+            continue
+        files.append(fileName[0])
+    return files
+
+def search(key, files, word):
+    print '\nDecrypting %d stories...' % delta                  # Exhaustive process might do better with a low-level language
+    fileData = []                                               # That's why I'm writing a Rust library for this...
+    displayProg = 0
+    printed = False
+    for i, File in enumerate(files):
+        progress = int((float(i + 1) / delta) * 100)
+        if progress is not displayProg:
+            displayProg = progress
+            printed = False
+        occurred = 0
+        if protect(File, 'd', key):
+            with open(loc + 'TEMP.tmp', 'r') as file:
+                data = file.readlines()
+            occurred = ''.join(data).count(word)
+        else:
+            print 'Cannot decrypt story! Skipping...'
+            continue
+        if occurred:
+            fileData[0].append(i)                               # difference between two days (timedelta object)
+            fileData[1].append(occurred)                        # and how many times the word has occurred
+        if not printed:
+            print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(fileData[1]))
+            printed = True
+    return fileData
+
+def pySearch(key):
     word = raw_input("Enter a word: ")
     choice = int(raw_input("\n\t1. Search everything!\n\t2. Search between two dates\n\nChoice: "))
     if choice == 1:
-        d1 = datetime(2014, 12, 13)                             # Happy Birthday, Diary!
+        d1 = datetime(2014, 12, 13)
         d2 = datetime.now()
     while choice == 2:
         try:
@@ -253,50 +295,25 @@ def search(key):                                                # Quite an inter
             continue
         break
     delta = (d2 - d1).days
-    print '\nDecrypting %d stories sequentially...' % delta     # Exhaustive process might do better with a low-level language
-    fileData = [], [], []                                       # That's why I'm writing a Rust library for this...
-    displayProg = 0
-    printed = False
-    for i in range(delta):
-        d = d1 + timedelta(days = i)
-        File = hashDate(d.year, d.month, d.day)[0]
-        if File == None:
-            continue
-        progress = int((float(i + 1) / delta) * 100)
-        if progress is not displayProg:
-            displayProg = progress
-            printed = False
-        occurred = 0
-        if protect(File, 'd', key):
-            with open(loc + 'TEMP.tmp', 'r') as file:
-                data = file.readlines()
-            occurred = ''.join(data).count(word)
-        else:
-            print 'Cannot decrypt story! Skipping...'
-            continue
-        if occurred:
-            fileData[0].append(i)                               # difference between two days (timedelta object)
-            fileData[1].append(occurred)                        # how many times the word has occurred
-            fileData[2].append(File)                            # file path (so that it can be easily opened later)
-        if not printed:
-            print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(fileData[1]))
-            printed = True
+    files = grabStories(delta, d1)
+    fileData = search(key, files, word)
     print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}.".format(d1 = d1, d2 = d2)
     if fileData[1]:
         print "\nStories on these days have the word '%s' in them...\n" % word
     else:
-        print '\nBad luck! Nothing...'
+        print '\nBummer! Nothing...'
     for i, delta in enumerate(fileData[0]):
         d = datetime(d1.year, d1.month, d1.day).date() + timedelta(days = delta)
         print '%d. %s %s, %s' % (i + 1, d.strftime('%B'), d.day, d.year)
     print '\nFound %d occurrences in %d stories!' % (sum(fileData[1]), len(fileData[0]))
     os.remove(loc + 'TEMP.tmp')
-    while fileData[2]:
+    while files:
         try:
             ch = int(raw_input('Enter a number to see the corresponding story: '))
-            temp(fileData[2][ch-1], key)
+            temp(files[ch-1], key)
         except Exception:
             print '\nOops! Bad input...\n'
+    return key
 
 if __name__ == '__main__':
     loc, key, choice = configure()

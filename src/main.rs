@@ -92,8 +92,8 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
 // }
 
 fn main() {
-    let p = "/path/to/Diary";
-    let mut total = 0;
+    let p = "/media/Windows/Users/Waffles Crazy Peanut/Desktop/Dropbox/Diary";
+    let mut total: u32 = 0;
     let mut files: Vec<u8> = Vec::new();
     let mut i = 0;
     for entry in read_dir(&p).unwrap() {
@@ -101,9 +101,9 @@ fn main() {
         let file_name = entry.unwrap().path();
         let contents = fopen(&file_name).1;
         let decrypted = charred(zombify(0, &contents, "key"));
-        let count = search(&decrypted, "query");
+        let count = search(&decrypted, "word");
         if count > 0 { files.push(i); }
-        i += 1;
+        i += 1; total += count as u32;
     }
-    println!("{:?}", (&files, files.len()));
+    println!("{:?}", (&files, files.len(), total));
 }
