@@ -4,21 +4,22 @@ extern crate rustc_serialize as serialize;
 
 use std::io::Read;
 use std::str;
+use std::mem;
 use std::slice;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::fs::File;
 use libc::{size_t, c_char};
 use serialize::hex::{FromHex, ToHex};
 
-// function to be called from Python with pointers as arguments
+// FFI function to be called from Python
 #[no_mangle]
-pub extern fn get_stuff(array: *const *const c_char, length: size_t) {
+pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c_char {
     // get the raw pointer values to the strings from the array pointer
     let array = unsafe { slice::from_raw_parts(array, length as usize) };
     let mut stuff: Vec<&str> = array.iter()
-        .map(|&p| unsafe { CStr::from_ptr(p) })             // get the C-string from the pointer
-        .map(|c_string| c_string.to_bytes())                // convert it to bytes
-        .map(|byte| str::from_utf8(byte).unwrap())          // finally collect the corresponding strings
+        .map(|&p| unsafe { CStr::from_ptr(p) })                 // get the C-type string from the pointer
+        .map(|c_string| c_string.to_bytes())                    // convert the raw thing to bytes
+        .map(|byte| str::from_utf8(byte).unwrap())              // finally collect the corresponding strings
         .collect();
     let word = stuff.pop().unwrap();
     let key = stuff.pop().unwrap();
@@ -27,8 +28,11 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) {
         let contents = fopen(&file_name).1;
         let decrypted = charred(zombify(0, &contents, key));
         let count = search(&decrypted, word);
-        occurrences.push(count);
-    } println!("{:?}", occurrences);
+        occurrences.push(count.to_string());
+    } let count_string = occurrences.connect(" ");
+    let c_string = CString::new(count_string).unwrap().as_ptr();
+    mem::forget(c_string);                                      // this leaks the memory allocated by c_string
+    c_string                                                    // the FFI code should now own the memory
 }
 
 // Hexing function
@@ -56,13 +60,10 @@ fn fopen(path: &str) -> (usize, Vec<u8>) {
 
 // Shifts the vector elements according to the given amount
 fn shift(text: &Vec<u8>, amount: u8) -> Vec<u8> {
-    let mut shifted_text = Vec::new();
-    let mut shift_by: u8;
-    for byte in text {
+    text.iter()
         // wrap around the boundary if the sum overflows
-        shift_by = amount.wrapping_add(*byte);
-        shifted_text.push(shift_by);
-    } shifted_text
+        .map(|byte| amount.wrapping_add(*byte))
+        .collect::<Vec<u8>>()
 }
 
 // Byte-wise XOR of vector elements according to a given string

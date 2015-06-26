@@ -17,11 +17,11 @@ Currently, I'm trying to minimize the time it takes to search. Since Python is h
 <sup>Most of the commits are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat usable. In case you wanna check those out, I've provided the links for each version below.</sup>
 
 v0.4.1: Anecdote
-- Improved search to suit the methods of both Python & Rust
+- Improved search to suit the methods written for both Python & Rust
 - Replaced the exhaustive date & time with builtin datetime objects
 - Hashed password & diary location is stored in a configuration file
-- <s>Now, the script can be linked to a Rust library to speed up the search</s>
-- Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp()`
+- Rust library can now be used for searching. It's damn fast! **But, it leaks memory!** (for now)
+- Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp(), rustySearch()`
 
 v0.4.0: [Memoir](https://github.com/Wafflespeanut/Memoir/tree/efc7cd4b15b1840c6b8d0a7c494690834e987cbe)
 - Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR.

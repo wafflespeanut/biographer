@@ -8,6 +8,24 @@ from timeit import default_timer as timer
 ploc = os.path.expanduser('~') + os.sep + '.diary'              # Config location
 rustLib = "target/release/libanecdote.so"                       # Library location
 
+def rustySearch(key, pathList, word):                           # Give the searching job to Rust!
+    '''FFI for communicating with Rust'''
+    if not os.path.exists(rustLib):
+        return 0, 0
+    lib = ctypes.cdll.LoadLibrary(rustLib)
+    list_to_send = pathList[:]
+    list_to_send.extend((key, word))
+    # send an array pointer full of string pointers, like a pointer to ['blah', 'blah', 'blah']
+    lib.get_stuff.argtypes = (ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t)     # type declarations must be done
+    lib.get_stuff.restype = ctypes.c_void_p                                         # or else, segfault!
+    start = timer()
+    c_array = (ctypes.c_char_p * len(list_to_send))(*list_to_send)
+    c_pointer = lib.get_stuff(c_array, len(list_to_send))
+    count_string = ctypes.c_char_p(c_pointer).value             # Boo hoo, there's no way I can free the memory here
+    occurrences = [int(i) for i in count_string.split(' ')]
+    stop = timer()
+    return occurrences, (stop - start)
+
 def hexed(text):                                                # Hexing function
     return map(lambda i:
         format(ord(i), '02x'), list(text))
@@ -283,20 +301,14 @@ def pySearch(key, files, word):                                 # Exhaustive pro
     stop = timer()
     return occurrences, (stop - start)
 
-def rustySearch(key, pathList, word):                           # Give the searching job to Rust!
-    lib = ctypes.cdll.LoadLibrary(rustLib)
-    list_to_send = pathList[:]
-    list_to_send.extend((key, word))
-    # send an array pointer full of string pointers
-    c_array = (ctypes.c_char_p * len(list_to_send))(*list_to_send)
-    start = timer()
-    lib.get_stuff(c_array, len(list_to_send))
-    stop = timer()
-    return (stop - start)
-
 def search(key):
     word = raw_input("Enter a word: ")
-    choice = int(raw_input("\n\t1. Search everything! (Python)\n\t2. Search between two dates\n\t3. Search everything! (Rust)\n\nChoice: "))
+    choice = 0
+    while choice not in (1, 2, 3):
+        choices = ('\n\t1. Search everything! (Python)',
+                    '2. Search between two dates (Python)',
+                    '3. Search everything! (Rust) - NOTE: Leaks memory! (for now)')
+        choice = int(raw_input('\n\t'.join(choices) + '\n\nChoice: '))
     if choice in (1, 3):
         d1 = datetime(2014, 12, 13)
         d2 = datetime.now()
@@ -320,8 +332,7 @@ def search(key):
     if choice in (1, 2):
         fileData, timing = pySearch(key, files[0], word)
     else:
-        rustySearch(key, files[0], word)
-        return key
+        fileData, timing = rustySearch(key, files[0], word)
     print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}.".format(d1 = d1, d2 = d2)
     if sum(fileData):
         print "\nStories on these days have the word '%s' in them...\n" % word
@@ -335,7 +346,8 @@ def search(key):
         print str(i + 1) + '. ' + data[1]               # print only the datetime
     print '\nTime taken:', timing, 'seconds!'
     print '\nFound %d occurrences in %d stories!\n' % (sum(fileData), len(results))
-    os.remove(loc + 'TEMP.tmp')
+    if os.path.exists(loc + 'TEMP.tmp'):
+        os.remove(loc + 'TEMP.tmp')
     while files:
         try:
             ch = int(raw_input('Enter the number to see the corresponding story: '))
@@ -372,7 +384,7 @@ if __name__ == '__main__':
            try:
                key = eval(options[int(ch)-1])                  # just to remember the password throughout the session
            except Exception as err:                            # But, you have to sign-in for each session!
-               print "\nAh, something bad has happened! Did you do it?"
+               print err, "\nAh, something bad has happened! Did you do it?"
            choice = raw_input('\nDo something again (y/n)? ')
        except KeyboardInterrupt:
            choice = raw_input('\nInterrupted! Do something again (y/n)? ')
