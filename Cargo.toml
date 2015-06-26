@@ -1,7 +1,11 @@
 [package]
-name = "diary"
-version = "0.3.0"
+name = "anecdote"
+version = "0.4.1"
 authors = ["Ravi Shankar <wafflespeanut@gmail.com>"]
 
 [dependencies]
 rustc-serialize = "0.3"
+
+[lib]
+name = "anecdote"
+crate-type = ["dylib"]

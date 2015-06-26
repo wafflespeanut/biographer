@@ -1,11 +1,35 @@
+#![feature(libc)]
+extern crate libc;
 extern crate rustc_serialize as serialize;
 
 use std::io::Read;
-use std::fs::{File, read_dir};
-use std::path::PathBuf;
+use std::str;
+use std::slice;
+use std::ffi::CStr;
+use std::fs::File;
+use libc::{size_t, c_char};
 use serialize::hex::{FromHex, ToHex};
 
-// Will soon become one and will have tests on it
+// function to be called from Python with pointers as arguments
+#[no_mangle]
+pub extern fn get_stuff(array: *const *const c_char, length: size_t) {
+    // get the raw pointer values to the strings from the array pointer
+    let array = unsafe { slice::from_raw_parts(array, length as usize) };
+    let mut stuff: Vec<&str> = array.iter()
+        .map(|&p| unsafe { CStr::from_ptr(p) })             // get the C-string from the pointer
+        .map(|c_string| c_string.to_bytes())                // convert it to bytes
+        .map(|byte| str::from_utf8(byte).unwrap())          // finally collect the corresponding strings
+        .collect();
+    let word = stuff.pop().unwrap();
+    let key = stuff.pop().unwrap();
+    let mut occurrences = Vec::new();
+    for file_name in stuff {
+        let contents = fopen(&file_name).1;
+        let decrypted = charred(zombify(0, &contents, key));
+        let count = search(&decrypted, word);
+        occurrences.push(count);
+    } println!("{:?}", occurrences);
+}
 
 // Hexing function
 fn hexed(encode: &str) -> String {
@@ -22,7 +46,7 @@ fn charred(decode: Vec<u8>) -> Vec<u8> {
 }
 
 // Gives a vector of file contents
-fn fopen(path: &PathBuf) -> (usize, Vec<u8>) {
+fn fopen(path: &str) -> (usize, Vec<u8>) {
     let file = File::open(path);
     let mut contents: Vec<u8> = Vec::new();
     // of course, assuming that there won't be any problem in reading the file
@@ -80,30 +104,8 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
     let word_array = word.as_bytes();
     let length = text.len() - word.len() + 1;
     for i in 0..length {
-        if text[i..text.len()].starts_with(&word_array) {
+        if text[i..].starts_with(&word_array) {
             count += 1;
         }
     } count
-}
-
-// #[no_mangle]
-// pub extern fn input() {
-
-// }
-
-fn main() {
-    let p = "/media/Windows/Users/Waffles Crazy Peanut/Desktop/Dropbox/Diary";
-    let mut total: u32 = 0;
-    let mut files: Vec<u8> = Vec::new();
-    let mut i = 0;
-    for entry in read_dir(&p).unwrap() {
-        // gives a PathBuf
-        let file_name = entry.unwrap().path();
-        let contents = fopen(&file_name).1;
-        let decrypted = charred(zombify(0, &contents, "key"));
-        let count = search(&decrypted, "word");
-        if count > 0 { files.push(i); }
-        i += 1; total += count as u32;
-    }
-    println!("{:?}", (&files, files.len(), total));
 }

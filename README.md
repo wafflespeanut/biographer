@@ -1,4 +1,4 @@
-## Memoir (v0.4.0)
+## Anecdote (v0.4.1)
 
 This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) in a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Caesar cipher with a byte-wise XOR<sup>[1]</sup>. It can also detect incorrect passwords.
 
