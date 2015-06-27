@@ -1,6 +1,6 @@
 ## Anecdote (v0.4.1)
 
-This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) in a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Caesar cipher with a byte-wise XOR<sup>[1]</sup>. It can also detect incorrect passwords.
+This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) into a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Caesar cipher with a byte-wise XOR<sup>[1]</sup>. It can also detect incorrect passwords.
 
 Once stored, it doesn't disturb the original story (unless you play around). It decrypts to a temporary file for viewing, which also gets deleted almost immediately. While updating stories, it just appends your story to the previous story.
 
@@ -8,20 +8,26 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 
 <sup>[1]: **It's not at all secure!**. And, that's not my goal either (at least, not for now). This is just to prevent people from peeking into the stories using text editors. But, if someone's really involved, then he'll be able to crack it in a few days.</sup>
 
-### Notes
+### Checklist
 
-Currently, I'm trying to minimize the time it takes to search. Since Python is high-level, I'm planning to link it to a Rust library which (I hope) will be damn fast! And, this will soon become command-line. I also have some future plans to make use of an open-source secure encryption scheme, a strong password hash, and put the stories into a database.
+- fix the memory leak occurring while transferring the string pointer from Rust to Python
+- switch from a shift cipher to a stream cipher. That's because we don't need integrity in this case, we just need confidentiality (in which stream cipher rocks!). *Of course, protecting the files is always on your side.*
+- add option for changing the password
+- spawn multiple threads while searching with Rust
 
 ### Changelog
 
-<sup>Most of the commits are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat usable. In case you wanna check those out, I've provided the links for each version below.</sup>
+<sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-v0.4.1: Anecdote
+v0.4.2: Biographer *(still checking out)*
+- Added errors, warnings & success messages
+- Rust library can now be used for searching. It's damn fast! **But, it leaks memory!** (for now)
+
+v0.4.1: [Anecdote](https://github.com/Wafflespeanut/anecdote/tree/6f7a80aa0ad24c299550e84e8d3ec0cf08bcbbc9)
 - Improved search to suit the methods written for both Python & Rust
 - Replaced the exhaustive date & time with builtin datetime objects
 - Hashed password & diary location is stored in a configuration file
-- Rust library can now be used for searching. It's damn fast! **But, it leaks memory!** (for now)
-- Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp(), rustySearch()`
+- Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp()`
 
 v0.4.0: [Memoir](https://github.com/Wafflespeanut/Memoir/tree/efc7cd4b15b1840c6b8d0a7c494690834e987cbe)
 - Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR.

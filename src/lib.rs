@@ -31,6 +31,7 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
         occurrences.push(count.to_string());
     } let count_string = occurrences.connect(" ");
     let c_string = CString::new(count_string).unwrap().as_ptr();
+    println!("{:?}", "Leaking the memory...");
     mem::forget(c_string);                                      // this leaks the memory allocated by c_string
     c_string                                                    // the FFI code should now own the memory
 }

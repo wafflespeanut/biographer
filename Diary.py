@@ -8,9 +8,13 @@ from timeit import default_timer as timer
 ploc = os.path.expanduser('~') + os.sep + '.diary'              # Config location
 rustLib = "target/release/libanecdote.so"                       # Library location
 
-def rustySearch(key, pathList, word):                           # Give the searching job to Rust!
-    '''FFI for communicating with Rust'''
+error = "[ERROR]"
+warning = "[WARNING]"
+success = "[SUCCESS]"
+
+def rustySearch(key, pathList, word):                           # FFI for giving the searching job to Rust
     if not os.path.exists(rustLib):
+        print error, 'Rust library not found!'
         return 0, 0
     lib = ctypes.cdll.LoadLibrary(rustLib)
     list_to_send = pathList[:]
@@ -100,18 +104,18 @@ def check():                                                    # Allows passwor
             while True:
                 key = getpass('\nEnter your password: ')
                 if len(key) < 8:
-                    print 'Choose a strong password! (at least 8 chars)'
+                    print warning, 'Choose a strong password! (at least 8 chars)'
                     continue
                 if getpass('Re-enter the password: ') == key:
                     break
                 else:
-                    print "\nPasswords don't match!"
+                    print error, "\nPasswords don't match!"
             hashedKey = hashed(sha256, key)
             with open(ploc, 'w') as file:
                 file.writelines([hashedKey + '\n'])
-            print '\nLogin credentials have been saved locally!'
+            print '\n', success, 'Login credentials have been saved locally!'
         except KeyboardInterrupt:
-            print "\nInterrupted! Couldn't store login credentials!"
+            print "\n", warning, "Interrupted! Couldn't store login credentials!"
             return True
     else:
         try:
@@ -120,10 +124,10 @@ def check():                                                    # Allows passwor
             key = getpass('\nEnter your password to continue: ')
             if not hashedKey == hashed(sha256, key):
                 # Fails if the password doesn't match with the credentials
-                print 'Wrong password!'
+                print error, 'Wrong password!'
                 return None
         except KeyboardInterrupt:
-            print 'Failed to authenticate!'
+            print '\n', error, 'Failed to authenticate!'
             return True
     return key
 
@@ -131,12 +135,12 @@ def protect(path, mode, key):                                   # A simple metho
     with open(path, 'r') as file:
         data = file.readlines()
     if not len(data):
-        print 'Nothing in file!'
+        print error, 'Nothing in file!'
         return key
     data = zombify(mode, ''.join(data), key)
     if not data:
         # Couldn't extract the chars from bytes! Indicates failure while decrypting
-        print '\n\tWrong password!'
+        print '\n\t', error, 'Wrong password!'
         return None
     File = (path if mode in ('e', 'w') else (loc + 'TEMP.tmp') if mode == 'd' else None)
     with open(File, 'w') as file:
@@ -180,7 +184,7 @@ def write(key, fileTuple = None):                               # Does the dirty
     with open(File, 'a') as file:
         file.writelines('\n\t'.join(data) + '\n\n')
     key = protect(File, 'e', key)
-    ch = raw_input('\nSuccessfully written to file! Do you wanna see it (y/n)? ')
+    ch = raw_input('\n' + success + ' Successfully written to file! Do you wanna see it (y/n)? ')
     if ch == 'y':
         temp(fileTuple, key)
     return key
@@ -201,18 +205,18 @@ def hashDate(year = None, month = None, day = None):            # Return a path 
                 day = date.strftime('%d')
                 break
         except Exception as err:
-            print "An error occurred:", err
+            print '\n', error, err
             year, month, day = None, None, None
             continue
     fileName = loc + hashed(md5, 'Day ' + day + ' (' + month + ' ' + year + ')')
     if not os.path.exists(fileName):
         if date > datetime.now():
-            print 'You cannot write/view a story for a day in the future!'
+            print '\n', error, 'You cannot write/view a story for a day in the future!'
             return 'blah'
-        print '\nNo stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
+        print error, '\nNo stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
         return None
     story = '{date:%B} {date:%d}, {date:%Y} ({date:%A})'.format(date = date)
-    # This will be useful for displaying the date of story
+    # will be useful for displaying the date of story
     return fileName, story
 
 def findStory(delta, date = datetime(2014, 12, 13)):            # Finds the file name using the timedelta from the birth of the diary to a specified date
@@ -247,13 +251,13 @@ def configure(delete = False):                                  # Configuration 
             else:
                 delete = True
         if delete:
-            print 'Deleting configuration file...'
+            print warning, 'Deleting configuration file...'
             os.remove(ploc)
         if not os.path.exists(ploc):
             print "\nLet's start configuring your diary..."
             loc = raw_input('Enter the (absolute) location for your diary: ')
             while not os.path.exists(loc):
-                print 'No such path exists!'
+                print error, 'No such path exists!'
                 loc = raw_input('Please enter a valid path: ')
             if loc[-1] is not os.sep:
                 loc += os.sep
@@ -293,7 +297,7 @@ def pySearch(key, files, word):                                 # Exhaustive pro
                 data = file.readlines()
             occurred = ''.join(data).count(word)
         else:
-            print 'Cannot decrypt story! Skipping... (filename hash: %s)' % File.split(os.sep)[-1]
+            print warning, 'Cannot decrypt story! Skipping... (filename hash: %s)' % File.split(os.sep)[-1]
         occurrences.append(occurred)
         if not printed:
             print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(occurrences))
@@ -307,7 +311,7 @@ def search(key):
     while choice not in (1, 2, 3):
         choices = ('\n\t1. Search everything! (Python)',
                     '2. Search between two dates (Python)',
-                    '3. Search everything! (Rust) - NOTE: Leaks memory! (for now)')
+                    '3. Search everything! (Rust) - ' + warning + ' Leaks memory! (for now)')
         choice = int(raw_input('\n\t'.join(choices) + '\n\nChoice: '))
     if choice in (1, 3):
         d1 = datetime(2014, 12, 13)
@@ -322,7 +326,7 @@ def search(key):
             else:
                 d2 = datetime.strptime(d2, '%Y-%m-%d')
         except ValueError:
-            print '\nOops! Error in input. Try again...'
+            print error, '\nOops! Error in input. Try again...'
             continue
         break
     delta = (d2 - d1).days
@@ -345,7 +349,7 @@ def search(key):
     for i, data in enumerate(results):
         print str(i + 1) + '. ' + data[1]               # print only the datetime
     print '\nTime taken:', timing, 'seconds!'
-    print '\nFound %d occurrences in %d stories!\n' % (sum(fileData), len(results))
+    print '\n', success, 'Found %d occurrences in %d stories!\n' % (sum(fileData), len(results))
     if os.path.exists(loc + 'TEMP.tmp'):
         os.remove(loc + 'TEMP.tmp')
     while files:
@@ -353,7 +357,7 @@ def search(key):
             ch = int(raw_input('Enter the number to see the corresponding story: '))
             temp((results[ch-1][0], results[ch-1][1]), key)
         except Exception:
-            print '\nOops! Bad input...\n'
+            print error, '\nOops! Bad input...\n'
     return key
 
 if __name__ == '__main__':
@@ -377,16 +381,16 @@ if __name__ == '__main__':
                    if ch in range(1, 7):
                        break
                    else:
-                       print '\n\tPlease enter a value between 0 and 6!'
+                       print '\n', error, 'Please enter a value between 0 and 6!'
                except ValueError:
-                   print "\n\tC'mon, quit playing around and start writing..."
+                   print '\n', error, "C'mon, quit playing around and start writing..."
            options = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
            try:
                key = eval(options[int(ch)-1])                  # just to remember the password throughout the session
            except Exception as err:                            # But, you have to sign-in for each session!
-               print err, "\nAh, something bad has happened! Did you do it?"
+               print err, '\n', error, 'Ah, something bad has happened! Did you do it?'
            choice = raw_input('\nDo something again (y/n)? ')
        except KeyboardInterrupt:
-           choice = raw_input('\nInterrupted! Do something again (y/n)? ')
+           choice = raw_input('\n\nInterrupted! Do something again (y/n)? ')
    if choice is not 'y':
        print '\nGoodbye...'
