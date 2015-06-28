@@ -1,4 +1,4 @@
-## Biographer (v0.4.2)
+## Biographer (v0.5.0)
 
 This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) into a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Caesar cipher with a byte-wise XOR<sup>[1]</sup> (which can also detect incorrect passwords).
 
@@ -12,8 +12,8 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 
 - <s>fix the memory leak occurring while transferring the string pointer from Rust to Python</s>
 - <s>add option for changing the password</s>
-- improve the algorithm for faster decryption (abandon TEMP.tmp)
-- add ways to zip the stories (backups)
+- <s>improve the algorithm for faster decryption (abandon TEMP.tmp)</s>
+- add ways to zip the stories (for backups)
 - use the hash of contents to check integrity and show warnings
 - spawn multiple threads while searching with Rust
 
@@ -22,11 +22,11 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 <sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
 v0.5.0: Biographer *(still checking out)*
-- Added errors, warnings & success messages
 - Rust library can now be used for searching. It's damn fast! (by a factor of ~100)
-- Added option for changing the password
-- Fixed a flaw in Python search
-- Functions: `changePass(), rustySearch(), pySearch()`
+- Added errors, warnings & success messages
+- Added an option for changing the password
+- Fixed some flaws in decryption (which has decreased the searching time by 20%)
+- Functions: `changePass(), pySearch(), protect(), temp(), protect(), write(), rustySearch()`
 
 v0.4.1: [Anecdote](https://github.com/Wafflespeanut/anecdote/tree/6f7a80aa0ad24c299550e84e8d3ec0cf08bcbbc9)
 - Improved search to suit the methods written for both Python & Rust
