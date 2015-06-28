@@ -10,7 +10,7 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 
 ### Checklist
 
-- fix the memory leak occurring while transferring the string pointer from Rust to Python
+- <s>fix the memory leak occurring while transferring the string pointer from Rust to Python</s>
 - switch from a shift cipher to a stream cipher. That's because we don't need integrity in this case, we just need confidentiality (in which stream cipher rocks!). *Of course, protecting the files is always on your side.*
 - add option for changing the password
 - spawn multiple threads while searching with Rust
@@ -21,11 +21,11 @@ There's a SHA-256 hashing function which hashes the password into a local file, 
 
 v0.4.2: Biographer *(still checking out)*
 - Added errors, warnings & success messages
-- Rust library can now be used for searching. It's damn fast! **But, it leaks memory!** (for now)
+- Rust library can now be used for searching. It's damn fast! (by a factor of ~100)
 
 v0.4.1: [Anecdote](https://github.com/Wafflespeanut/anecdote/tree/6f7a80aa0ad24c299550e84e8d3ec0cf08bcbbc9)
 - Improved search to suit the methods written for both Python & Rust
-- Replaced the exhaustive date & time with builtin datetime objects
+- Replaced the exhaustive date & time with built-in `datetime` objects
 - Hashed password & diary location is stored in a configuration file
 - Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp()`
 

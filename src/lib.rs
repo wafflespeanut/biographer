@@ -1,4 +1,5 @@
 #![feature(libc)]
+#![feature(cstr_memory)]
 extern crate libc;
 extern crate rustc_serialize as serialize;
 
@@ -11,15 +12,21 @@ use std::fs::File;
 use libc::{size_t, c_char};
 use serialize::hex::{FromHex, ToHex};
 
+// FFI function just to kill a transferred pointer
+#[no_mangle]
+pub extern fn kill_pointer(p: *const c_char) {
+    let c_string = unsafe { CString::from_ptr(p) };         // Theoretically, Rust should take the ownership back
+}   // variable goes out of scope here and the C-type string should be destroyed (at least, that's what I hope)
+
 // FFI function to be called from Python
 #[no_mangle]
 pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c_char {
     // get the raw pointer values to the strings from the array pointer
     let array = unsafe { slice::from_raw_parts(array, length as usize) };
     let mut stuff: Vec<&str> = array.iter()
-        .map(|&p| unsafe { CStr::from_ptr(p) })                 // get the C-type string from the pointer
-        .map(|c_string| c_string.to_bytes())                    // convert the raw thing to bytes
-        .map(|byte| str::from_utf8(byte).unwrap())              // finally collect the corresponding strings
+        .map(|&p| unsafe { CStr::from_ptr(p) })         // get the C-type string from the pointer
+        .map(|c_string| c_string.to_bytes())            // convert the raw thing to bytes
+        .map(|byte| str::from_utf8(byte).unwrap())      // finally collect the corresponding strings
         .collect();
     let word = stuff.pop().unwrap();
     let key = stuff.pop().unwrap();
@@ -30,10 +37,9 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
         let count = search(&decrypted, word);
         occurrences.push(count.to_string());
     } let count_string = occurrences.connect(" ");
-    let c_string = CString::new(count_string).unwrap().as_ptr();
-    println!("{:?}", "Leaking the memory...");
-    mem::forget(c_string);                                      // this leaks the memory allocated by c_string
-    c_string                                                    // the FFI code should now own the memory
+    let c_string = CString::new(count_string).unwrap().into_ptr();
+    mem::forget(c_string);                  // Whee... Leaking the memory allocated by c_string
+    c_string                                // the FFI code should now own the memory
 }
 
 // Hexing function

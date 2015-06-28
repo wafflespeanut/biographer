@@ -5,41 +5,45 @@ from datetime import datetime, timedelta
 from hashlib import md5, sha256
 from timeit import default_timer as timer
 
-ploc = os.path.expanduser('~') + os.sep + '.diary'              # Config location
-rustLib = "target/release/libanecdote.so"                       # Library location
+ploc = os.path.expanduser('~') + os.sep + '.diary'      # Config location
+rustLib = "target/release/libanecdote.so"               # Library location
 
 error = "[ERROR]"
 warning = "[WARNING]"
 success = "[SUCCESS]"
 
-def rustySearch(key, pathList, word):                           # FFI for giving the searching job to Rust
+def rustySearch(key, pathList, word):           # FFI for giving the searching job to Rust
     if not os.path.exists(rustLib):
         print error, 'Rust library not found!'
         return 0, 0
     lib = ctypes.cdll.LoadLibrary(rustLib)
     list_to_send = pathList[:]
     list_to_send.extend((key, word))
+
     # send an array pointer full of string pointers, like a pointer to ['blah', 'blah', 'blah']
     lib.get_stuff.argtypes = (ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t)     # type declarations must be done
     lib.get_stuff.restype = ctypes.c_void_p                                         # or else, segfault!
+    lib.kill_pointer.argtypes = [ctypes.c_void_p]
+
     start = timer()
     c_array = (ctypes.c_char_p * len(list_to_send))(*list_to_send)
     c_pointer = lib.get_stuff(c_array, len(list_to_send))
-    count_string = ctypes.c_char_p(c_pointer).value             # Boo hoo, there's no way I can free the memory here
+    count_string = ctypes.c_char_p(c_pointer).value
+    lib.kill_pointer(c_pointer)                 # Sending the pointer back to Rust for destruction
     occurrences = [int(i) for i in count_string.split(' ')]
     stop = timer()
     return occurrences, (stop - start)
 
-def hexed(text):                                                # Hexing function
+def hexed(text):                                # Hexing function
     return map(lambda i:
         format(ord(i), '02x'), list(text))
 
-def hashed(hashFunction, text):                                 # Hashing function (could be MD5 or SHA-256)
+def hashed(hashFunction, text):                 # Hashing function (could be MD5 or SHA-256)
     hashObject = hashFunction()
     hashObject.update(text)
     return hashObject.hexdigest()
 
-def char(text):                                                 # Hex-decoding function
+def char(text):                                 # Hex-decoding function
     split = [text[i:i+2] for i in range(0, len(text), 2)]
     try:
         return ''.join(i.decode('hex') for i in split)
@@ -48,7 +52,7 @@ def char(text):                                                 # Hex-decoding f
 
 # use a random seed and CBC here...
 
-def CXOR(text, key):                                            # Byte-wise XOR
+def CXOR(text, key):                            # Byte-wise XOR
     def xor(char1, char2):
         return chr(ord(char1) ^ ord(char2))
     out = ''
@@ -60,7 +64,7 @@ def CXOR(text, key):                                            # Byte-wise XOR
             j = 0
     return ''.join(out)
 
-def shift(text, amount):                                        # Shifts the ASCII value of the chars
+def shift(text, amount):                        # Shifts the ASCII value of the chars
     try:
         shiftedText = ''
         for i, ch in enumerate(text):
@@ -70,7 +74,7 @@ def shift(text, amount):                                        # Shifts the ASC
         return None
     return shiftedText
 
-def zombify(mode, data, key):                                   # Linking helper function
+def zombify(mode, data, key):                   # Linking helper function
     hexedKey = ''.join(hexed(key))
     ch = sum([ord(i) for i in hexedKey])
     if mode == 'e':
@@ -80,7 +84,7 @@ def zombify(mode, data, key):                                   # Linking helper
         text = shift(CXOR(data, key), 256 - ch)
         return char(text)
 
-def temp(fileTuple, key):                                       # Decrypts and prints the story on the screen
+def temp(fileTuple, key):                       # Decrypts and prints the story on the screen
     if type(fileTuple) == tuple:
         if protect(fileTuple[0], 'd', key):
             print 'Your story from', fileTuple[1], '...'
@@ -98,7 +102,7 @@ def temp(fileTuple, key):                                       # Decrypts and p
     else:
         return None
 
-def check():                                                    # Allows password to be stored locally
+def check():                                    # Allows password to be stored locally
     if not os.path.exists(ploc):
         try:
             while True:
@@ -131,7 +135,7 @@ def check():                                                    # Allows passwor
             return True
     return key
 
-def protect(path, mode, key):                                   # A simple method which shifts and turns it to hex!
+def protect(path, mode, key):                   # A simple method which shifts and turns it to hex!
     with open(path, 'r') as file:
         data = file.readlines()
     if not len(data):
@@ -147,7 +151,7 @@ def protect(path, mode, key):                                   # A simple metho
         file.writelines([data])
     return key
 
-def write(key, fileTuple = None):                               # Does the dirty writing job
+def write(key, fileTuple = None):               # Does the dirty writing job
     if not fileTuple:
         now = datetime.now()
         date = hashed(md5, 'Day ' + now.strftime('%d') + ' (' + now.strftime('%B') + ' ' + now.strftime('%Y') + ')')
@@ -189,7 +193,7 @@ def write(key, fileTuple = None):                               # Does the dirty
         temp(fileTuple, key)
     return key
 
-def hashDate(year = None, month = None, day = None):            # Return a path based on (day, month, year) input
+def hashDate(year = 0, month = 0, day = 0):     # Return a path based on (day, month, year) input
     while True:
         try:
             if not year:
@@ -311,7 +315,7 @@ def search(key):
     while choice not in (1, 2, 3):
         choices = ('\n\t1. Search everything! (Python)',
                     '2. Search between two dates (Python)',
-                    '3. Search everything! (Rust) - ' + warning + ' Leaks memory! (for now)')
+                    '3. Search everything! (Rust)')
         choice = int(raw_input('\n\t'.join(choices) + '\n\nChoice: '))
     if choice in (1, 3):
         d1 = datetime(2014, 12, 13)
@@ -344,7 +348,7 @@ def search(key):
         print '\nTime taken:', timing, 'seconds!'
         print '\nBummer! Nothing...'
         return key
-    # splitting into pairs
+    # splitting into pairs (for later use)
     results = [(files[0][i], files[1][i]) for i, count in enumerate(fileData) if count]
     for i, data in enumerate(results):
         print str(i + 1) + '. ' + data[1]               # print only the datetime
@@ -386,9 +390,9 @@ if __name__ == '__main__':
                    print '\n', error, "C'mon, quit playing around and start writing..."
            options = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
            try:
-               key = eval(options[int(ch)-1])                  # just to remember the password throughout the session
-           except Exception as err:                            # But, you have to sign-in for each session!
-               print err, '\n', error, 'Ah, something bad has happened! Did you do it?'
+               key = eval(options[int(ch)-1])   # just to remember the password throughout the session
+           except Exception as err:             # But, you have to sign-in for each session!
+               print '\n', error, 'Ah, something bad has happened! Did you do it?'
            choice = raw_input('\nDo something again (y/n)? ')
        except KeyboardInterrupt:
            choice = raw_input('\n\nInterrupted! Do something again (y/n)? ')
