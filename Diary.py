@@ -1,4 +1,4 @@
-import os, ctypes
+import os, ctypes, shutil
 from random import choice as rchoice
 from getpass import getpass
 from datetime import datetime, timedelta
@@ -20,7 +20,7 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
     list_to_send = pathList[:]
     list_to_send.extend((key, word))
 
-    # send an array pointer full of string pointers, like a pointer to ['blah', 'blah', 'blah']
+    # send an array pointer full of string pointers (like a pointer to ['blah', 'blah', 'blah'])
     lib.get_stuff.argtypes = (ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t)     # type declarations must be done
     lib.get_stuff.restype = ctypes.c_void_p                                         # or else, segfault!
     lib.kill_pointer.argtypes = [ctypes.c_void_p]
@@ -49,8 +49,6 @@ def char(text):                                 # Hex-decoding function
         return ''.join(i.decode('hex') for i in split)
     except TypeError:
         return None
-
-# use a random seed and CBC here...
 
 def CXOR(text, key):                            # Byte-wise XOR
     def xor(char1, char2):
@@ -247,8 +245,10 @@ def configure(delete = False):                                  # Configuration 
             print 'Configuration file found!'
             with open(ploc, 'r') as file:
                 config = file.readlines()
-            if len(config) > 1:
+            if len(config) == 2:
                 loc = config[1]
+                if loc[-1] == '\n':
+                    loc = loc[:-1]
                 key = check()
                 if type(key) is not str:
                     return None, None, 'n'
@@ -364,6 +364,42 @@ def search(key):
             print error, '\nOops! Bad input...\n'
     return key
 
+def changePass(key):                            # Exhaustive method to change the password
+    if not getpass('\nOld password: ') == key:
+        print '\n', error, 'Wrong password!'
+        return loc, key
+    newKey = getpass('New password: ')
+    if newKey == key:
+        print '\n', error, 'Both passwords are the same!'
+        return loc, key
+    if not getpass('Re-enter new password: ') == newKey:
+        print '\n', error, "Passwords don't match!"
+        return loc, key
+    print '\nWorking...'
+    shutil.copytree(loc, loc + 'TEMP')          # always have precautions!
+    print 'Decrypting using old key...'
+    for File in os.listdir(loc + 'TEMP'):
+        key = protect(loc + 'TEMP' + os.sep + File, 'w', key)
+        if key == None:
+            os.rmdir(loc + 'TEMP')
+            print error, 'This file has issue (filename hash: %s)\nResolve it before changing the password...' % File
+            return loc, key
+    print 'Encrypting using the new key...'
+    for File in os.listdir(loc + 'TEMP'):
+        key = protect(loc + 'TEMP' + os.sep + File, 'e', newKey)
+    print 'Overwriting the existing stories...'
+    for File in os.listdir(loc):
+        try:
+            os.remove(loc + File)
+            os.rename(loc + 'TEMP' + os.sep + File, loc + File)
+        except OSError:
+            continue                            # This should leave our temporary folder
+    os.rmdir(loc + 'TEMP')
+    print 'Modifying the configuration file...'
+    with open(ploc, 'w') as file:
+        file.writelines([hashed(sha256, key), '\n', loc])
+    return loc, key
+
 if __name__ == '__main__':
    loc, key, choice = configure()
    while choice is 'y':
@@ -378,7 +414,8 @@ if __name__ == '__main__':
                    " 3: View the story of someday",
                    " 4. Write the story for someday you've missed",
                    " 5. Search your stories",
-                   " 6. Reconfigure your diary",)
+                   " 6. Change your password",
+                   " 7. Reconfigure your diary",)
                print '\n\t\t'.join(choices)
                try:
                    ch = int(raw_input('\nChoice: '))
@@ -388,11 +425,17 @@ if __name__ == '__main__':
                        print '\n', error, 'Please enter a value between 0 and 6!'
                except ValueError:
                    print '\n', error, "C'mon, quit playing around and start writing..."
-           options = ['write(key)', 'random(key)', 'temp(hashDate(), key)', 'write(key, hashDate())', 'search(key)', 'configure(True)']
+           options =   ['key = write(key)',     # just to remember the password throughout the session
+                        'key = random(key)',
+                        'key = temp(hashDate(), key)',
+                        'key = write(key, hashDate())',
+                        'key = search(key)',
+                        'loc, key = changePass(key)',
+                        'loc, key, choice = configure(True)']
            try:
-               key = eval(options[int(ch)-1])   # just to remember the password throughout the session
+               exec(options[int(ch)-1])
            except Exception as err:             # But, you have to sign-in for each session!
-               print '\n', error, 'Ah, something bad has happened! Did you do it?'
+               print err, '\n', error, 'Ah, something bad has happened! Did you do it?'
            choice = raw_input('\nDo something again (y/n)? ')
        except KeyboardInterrupt:
            choice = raw_input('\n\nInterrupted! Do something again (y/n)? ')

@@ -15,7 +15,7 @@ use serialize::hex::{FromHex, ToHex};
 // FFI function just to kill a transferred pointer
 #[no_mangle]
 pub extern fn kill_pointer(p: *const c_char) {
-    let c_string = unsafe { CString::from_ptr(p) };         // Theoretically, Rust should take the ownership back
+    let c_string = unsafe { CString::from_ptr(p) };     // Theoretically, Rust should take the ownership back
 }   // variable goes out of scope here and the C-type string should be destroyed (at least, that's what I hope)
 
 // FFI function to be called from Python

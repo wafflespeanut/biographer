@@ -1,27 +1,32 @@
-## Anecdote (v0.4.1)
+## Biographer (v0.4.2)
 
-This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) into a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Caesar cipher with a byte-wise XOR<sup>[1]</sup>. It can also detect incorrect passwords.
+This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) into a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Caesar cipher with a byte-wise XOR<sup>[1]</sup> (which can also detect incorrect passwords).
 
-Once stored, it doesn't disturb the original story (unless you play around). It decrypts to a temporary file for viewing, which also gets deleted almost immediately. While updating stories, it just appends your story to the previous story.
+Once stored, it doesn't disturb the original story (unless you play around). It decrypts to a temporary file for viewing, which also gets deleted almost immediately. While updating the stories, it just appends your story to the previous story.
 
-There's a SHA-256 hashing function which hashes the password into a local file, so that instead of typing the password each time you write/view some story, you can save it by signing in, but it requires at least one sign-in per session. And, the cool part - you can search through your stories for specific words (between a range of dates).
+There's a SHA-256 hashing function which hashes the password into a local file, so that instead of typing the password every time you write/view some story, you can save it by signing in, but it requires at least one sign-in per session. And, the cool part - you can search through your stories for specific words (between a range of dates) either using Python or the provided Rust library.
 
-<sup>[1]: **It's not at all secure!**. And, that's not my goal either (at least, not for now). This is just to prevent people from peeking into the stories using text editors. But, if someone's really involved, then he'll be able to crack it in a few days.</sup>
+<sup>[1]: **It's not at all secure!**, but that's not my goal either! (at least, not for now). We need confidentiality, not integrity. So, this is just to prevent people from peeking into the stories using text editors. Protecting the stories however, is on your side. But, if someone's really involved, then he'll be able to crack it in a few days.</sup>
 
 ### Checklist
 
 - <s>fix the memory leak occurring while transferring the string pointer from Rust to Python</s>
-- switch from a shift cipher to a stream cipher. That's because we don't need integrity in this case, we just need confidentiality (in which stream cipher rocks!). *Of course, protecting the files is always on your side.*
-- add option for changing the password
+- <s>add option for changing the password</s>
+- improve the algorithm for faster decryption (abandon TEMP.tmp)
+- add ways to zip the stories (backups)
+- use the hash of contents to check integrity and show warnings
 - spawn multiple threads while searching with Rust
 
 ### Changelog
 
 <sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-v0.4.2: Biographer *(still checking out)*
+v0.5.0: Biographer *(still checking out)*
 - Added errors, warnings & success messages
 - Rust library can now be used for searching. It's damn fast! (by a factor of ~100)
+- Added option for changing the password
+- Fixed a flaw in Python search
+- Functions: `changePass(), rustySearch(), pySearch()`
 
 v0.4.1: [Anecdote](https://github.com/Wafflespeanut/anecdote/tree/6f7a80aa0ad24c299550e84e8d3ec0cf08bcbbc9)
 - Improved search to suit the methods written for both Python & Rust
