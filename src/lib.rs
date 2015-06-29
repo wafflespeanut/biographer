@@ -4,13 +4,13 @@ extern crate libc;
 extern crate rustc_serialize as serialize;
 
 use std::io::Read;
-use std::str;
-use std::mem;
-use std::slice;
+use std::{str, mem, slice};
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use libc::{size_t, c_char};
 use serialize::hex::{FromHex, ToHex};
+
+// And, you'll be needing Nightly rust, because `from_ptr` is unstable and it's not available for the stable version (yet)
 
 // FFI function just to kill a transferred pointer
 #[no_mangle]
@@ -30,13 +30,10 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
         .collect();
     let word = stuff.pop().unwrap();
     let key = stuff.pop().unwrap();
-    let mut occurrences = Vec::new();
-    for file_name in stuff {
-        let contents = fopen(&file_name).1;
-        let decrypted = charred(zombify(0, &contents, key));
-        let count = search(&decrypted, word);
-        occurrences.push(count.to_string());
-    } let count_string = occurrences.connect(" ");
+    let occurrences: Vec<String> = stuff.into_iter().map(|file_name| {
+        count_words(&file_name, &key, &word)            // Parallel threads won't be helpful here
+    }).collect();                                       // Since this isn't intensive computation,
+    let count_string = occurrences.connect(" ");        // the overhead for launching threads are gonna cost more time
     let c_string = CString::new(count_string).unwrap().into_ptr();
     mem::forget(c_string);                  // Whee... Leaking the memory allocated by c_string
     c_string                                // the FFI code should now own the memory
@@ -85,19 +82,19 @@ fn xor(text: &Vec<u8>, key: &str) -> Vec<u8> {
     } xorred
 }
 
-// Invokes the helper functions and does some useful stuff
+// Invokes the helper functions and does its shifting thing
 fn zombify(mode: u8, data: &Vec<u8>, key: &str) -> Vec<u8> {
     let hexed_key = hexed(key);
     let mut amount: u8 = 0;
     for byte in hexed_key.as_bytes() {
         amount = amount.wrapping_add(*byte);
     } let mut text: Vec<u8> = data.clone();
-    if mode == 1 {
-        // encrypt the thing
+    if mode == 1 {  // encrypts the vector of bytes
+        // but this won't be useful since the library is meant to only decrypt files (for now)
         text = data.to_hex().into_bytes();
         let shifted_text = shift(&text, amount);
         xor(&shifted_text, &key)
-    } else {
+    } else {    // decrypts the vector of bytes
         let limit: u8 = 0;
         // shift by (256 - amount) for the reverse process
         amount = limit.wrapping_sub(amount);
@@ -116,4 +113,11 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
             count += 1;
         }
     } count
+}
+
+// This just decrypts the file and counts the word in it (just to simplify things)
+fn count_words(file_name: &str, key: &str, word: &str) -> String {
+    let contents = fopen(&file_name).1;
+    let decrypted = charred(zombify(0, &contents, key));
+    search(&decrypted, word).to_string()
 }

@@ -1,12 +1,14 @@
-import os, ctypes, shutil
+import os, sys, ctypes, shutil
 from random import choice as rchoice
 from getpass import getpass
 from datetime import datetime, timedelta
 from hashlib import md5, sha256
 from timeit import default_timer as timer
 
-ploc = os.path.expanduser('~') + os.sep + '.diary'      # Config location
-rustLib = "target/release/libanecdote.so"               # Library location
+ploc = os.path.expanduser('~') + os.sep + '.diary'      # Config location (absolute)
+libExt = ('dll' if sys.platform == 'win32' else 'dylib' if sys.platform == 'darwin' else 'so')
+rustLib = "target/release/libbiographer." + libExt      # Library location (relative)
+# And, you'll be needing Nightly rust, because this library depends on a future method
 
 error = "\n[ERROR]"
 warning = "\n[WARNING]"
@@ -15,11 +17,12 @@ success = "\n[SUCCESS]"
 # fileTuple = (file_path, formatted_datetime) returned by hashDate()
 # dataTuple = (file_contents, key) returned by protect()
 # fileData = list(word_counts) for each file sorted by date, returned by the searching functions
+# EOFError is added here & there just to make it work in Windows (actually, it sucks in Windows!)
 
 def rustySearch(key, pathList, word):           # FFI for giving the searching job to Rust
     if not os.path.exists(rustLib):
         print error, 'Rust library not found!'
-        return 0, 0
+        return [0] * len(pathList), 0
     lib = ctypes.cdll.LoadLibrary(rustLib)
     list_to_send = pathList[:]
     list_to_send.extend((key, word))
@@ -39,8 +42,7 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
     return occurrences, (stop - start)
 
 def hexed(text):                                # Hexing function
-    return map(lambda i:
-        format(ord(i), '02x'), list(text))
+    return map(lambda i: format(ord(i), '02x'), list(text))
 
 def hashed(hashFunction, text):                 # Hashing function (could be MD5 or SHA-256)
     hashObject = hashFunction()
@@ -91,8 +93,8 @@ def temp(fileTuple, key):                       # Decrypts and prints the story 
         dataTuple = protect(fileTuple[0], 'd', key)
         if dataTuple:
             data, key = dataTuple
-            print 'Your story from', fileTuple[1], '...'
-            print "\n<----- START OF STORY ----->\n", data, "<----- END OF STORY ----->"
+            print '\nYour story from', fileTuple[1], '...'
+            print "\n<----- START OF STORY ----->\n\n", data, "<----- END OF STORY ----->\n"
             return key
         else:
             return None
@@ -117,7 +119,7 @@ def check():                                    # Allows password to be stored l
             with open(ploc, 'w') as file:
                 file.writelines([hashedKey + '\n'])
             print success, 'Login credentials have been saved locally!'
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             print warning, "Interrupted! Couldn't store login credentials!"
             return True
     else:
@@ -153,10 +155,14 @@ def protect(path, mode, key):                   # A simple method which shifts a
         return data, key
 
 def write(key, fileTuple = None):               # Does the dirty writing job
+    keyComb = ('Ctrl+Z and [Enter]', 'Ctrl+C')
+    if sys.platform == 'win32':
+        print warning, "If you're using the command prompt, press %s instead of %s!" % keyComb
+        keyComb = keyComb[::-1]
     if not fileTuple:
         now = datetime.now()
         date = hashed(md5, 'Day ' + now.strftime('%d') + ' (' + now.strftime('%B') + ' ' + now.strftime('%Y') + ')')
-        story = '\nYour story from {date:%B} {date:%d}, {date:%Y} ({date:%A}) ...'.format(date = now)
+        story = '{date:%B} {date:%d}, {date:%Y} ({date:%A}) ...'.format(date = now)
         fileTuple = (loc + date, story)
     elif type(fileTuple) == str:
         return key
@@ -172,9 +178,9 @@ def write(key, fileTuple = None):               # Does the dirty writing job
     timestamp = str(datetime.now()).split('.')[0].split(' ')
     data = ['[' + timestamp[0] + '] ' + timestamp[1] + '\n']
     try:
-        stuff = raw_input("\nStart writing... (Press Ctrl+C when you're done!)\n\n\t")
+        stuff = raw_input("\nStart writing... (Press {} when you're done!)\n\n\t".format(keyComb[1]))
         data.append(stuff)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         print '\nNothing written! Quitting...'
         if os.path.exists(File) and os.path.getsize(File):
             key = protect(File, 'e', key)
@@ -184,7 +190,7 @@ def write(key, fileTuple = None):               # Does the dirty writing job
             stuff = raw_input('\t')
             # Auto-tabbing of paragraphs (for each <RETURN>)
             data.append(stuff)
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             break
     with open(File, 'a') as file:
         file.writelines('\n\t'.join(data) + '\n\n')
@@ -273,7 +279,7 @@ def configure(delete = False):                                  # Configuration 
                 return None, None, 'n'
             with open(ploc, 'a') as file:
                 file.writelines([loc])                          # Store the location along with the password hash
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         return None, None, 'n'
     return loc, key, choice
 
@@ -358,10 +364,12 @@ def search(key):
     print success, 'Found %d occurrences in %d stories!\n' % (sum(wordCount), len(results))
     while fileData:
         try:
-            ch = int(raw_input('Enter the number to see the corresponding story: '))
+            ch = int(raw_input('Enter the number to see the corresponding story (Ctrl+C to exit): '))
             temp((results[ch-1][0], results[ch-1][1]), key)
         except Exception:
             print error, 'Oops! Bad input...\n'
+        except KeyboardInterrupt:
+            return key
     return key
 
 def changePass(key):                            # Exhaustive method to change the password
@@ -382,7 +390,7 @@ def changePass(key):                            # Exhaustive method to change th
         key = protect(loc + 'TEMP' + os.sep + File, 'w', key)
         if key == None:
             os.rmdir(loc + 'TEMP')
-            print error, 'This file has issue (filename hash: %s)\nResolve it before changing the password...' % File
+            print error, 'This file has an issue (filename hash: %s)\nResolve it before changing the password...' % File
             return loc, key
     print 'Encrypting using the new key...'
     for File in os.listdir(loc + 'TEMP'):
@@ -402,41 +410,42 @@ def changePass(key):                            # Exhaustive method to change th
     return loc, key
 
 if __name__ == '__main__':
-   loc, key, choice = configure()
-   while choice is 'y':
-       try:
-           print '\n### This program runs best on Linux terminal ###'
-           while True:
-               choices = ('\n\tWhat do you wanna do?\n',
-                   " 1: Write today's story",
-                   " 2: Random story",
-                   " 3: View the story of someday",
-                   " 4. Write the story for someday you've missed",
-                   " 5. Search your stories",
-                   " 6. Change your password",
-                   " 7. Reconfigure your diary",)
-               print '\n\t\t'.join(choices)
-               try:
-                   ch = int(raw_input('\nChoice: '))
-                   if ch in range(1, 7):
-                       break
-                   else:
-                       print error, 'Please enter a value between 0 and 6!'
-               except ValueError:
-                   print error, "C'mon, quit playing around and start writing..."
-           options =   ['key = write(key)',     # just to remember the password throughout the session
+    loc, key, choice = configure()
+    while choice is 'y':
+        try:
+            if not sys.platform == 'linux':
+                print '\n### This program runs best on Linux terminal ###'
+            while True:
+                choices = ('\n\tWhat do you wanna do?\n',
+                    " 1: Write today's story",
+                    " 2: Random story",
+                    " 3: View the story of someday",
+                    " 4. Write the story for someday you've missed",
+                    " 5. Search your stories",
+                    " 6. Change your password",
+                    " 7. Reconfigure your diary",)
+                print '\n\t\t'.join(choices)
+                try:
+                    ch = int(raw_input('\nChoice: '))
+                    if ch in range(1, len(choices)):
+                        break
+                    else:
+                        print error, 'Please enter a value between 1 and %d!' % (len(choices) - 1)
+                except ValueError:
+                    print error, "C'mon, quit playing around! Let's start writing..."
+            options =   ['key = write(key)',     # just to remember the password throughout the session
                         'key = random(key)',
                         'key = temp(hashDate(), key)',
                         'key = write(key, hashDate())',
                         'key = search(key)',
                         'loc, key = changePass(key)',
                         'loc, key, choice = configure(True)']
-           try:
-               exec(options[int(ch)-1])
-           except Exception as err:             # But, you have to sign-in for each session!
-               print error, 'Ah, something bad has happened! Did you do it?'
-           choice = raw_input('\nDo something again (y/n)? ')
-       except KeyboardInterrupt:
-           choice = raw_input('\n' + warning + 'Interrupted! Do something again (y/n)? ')
-   if choice is not 'y':
-       print '\nGoodbye...'
+            try:
+                exec(options[int(ch)-1])
+            except Exception as err:             # But, you have to sign-in for each session!
+                print err, error, 'Ah, something bad has happened! Did you do it?'
+            choice = raw_input('\nDo something again (y/n)? ')
+        except (KeyboardInterrupt, EOFError):
+            choice = raw_input('\n' + warning + ' Interrupted! Do something again (y/n)? ')
+    if choice is not 'y':
+        print '\nGoodbye...'
