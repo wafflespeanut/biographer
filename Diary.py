@@ -7,9 +7,9 @@ from time import sleep
 from timeit import default_timer as timer
 
 ploc = os.path.expanduser('~') + os.sep + '.diary'      # Config location (absolute)
-libExt = ('dll' if sys.platform == 'win32' else 'dylib' if sys.platform == 'darwin' else 'so')
-rustLib = "target/release/libbiographer." + libExt      # Library location (relative)
-# And, you'll be needing Nightly rust, because this library depends on a future method
+libName = ('biographer.dll' if sys.platform == 'win32' else 'libbiographer.dylib' if sys.platform == 'darwin' else 'libbiographer.so')
+rustLib = "target/release/" + libName                   # Library location (relative)
+# And, you'll be needing Nightly rust (v1.3.0), because this library depends on a future method
 
 error = "\n[ERROR]"
 warning = "\n[WARNING]"
@@ -83,8 +83,6 @@ def shift(text, amount):            # Shifts the ASCII value of the chars
         return None
     return shiftedText
 
-# def CBC(mode, data, key):
-
 def zombify(mode, data, key):       # Linking helper function
     hexedKey = ''.join(hexed(key))
     ch = sum([ord(i) for i in hexedKey])
@@ -146,19 +144,22 @@ def check():                        # Allows password to be stored locally
     return key
 
 def protect(path, mode, key):       # A simple method which shifts and turns it to hex!
-    with open(path, 'r') as file:
-        data = file.readlines()
+    with open(path, 'rb') as file:
+        data = ''.join(file.readlines())
     if not len(data):
         print error, 'Nothing in file!'
         return key
-    data = zombify(mode, ''.join(data), key)
+    if mode == 'e':                 # a little stunt to strip '\r' from the lines
+        data = zombify(mode, ''.join(data.split('\r')), key)
+    else:
+        data = zombify(mode, data, key)
     if not data:
         # Couldn't extract the chars from bytes! Indicates failure while decrypting
         print error, 'Wrong password!'
         return None
     if mode in ('e', 'w'):
-        with open(path, 'w') as file:
-            file.writelines([data])
+        with open(path, 'wb') as file:
+            file.writelines(data)
         return key
     else:
         return data, key
@@ -261,7 +262,7 @@ def configure(delete = False):      # Configuration file for authentication
     try:
         choice = 'y'
         if os.path.exists(ploc) and not delete:
-            print 'Configuration file found!'
+            print '\nConfiguration file found!'
             with open(ploc, 'r') as file:
                 config = file.readlines()
             if len(config) == 3:
@@ -410,6 +411,8 @@ def changePass(key):                # Exhaustive method to change the password
         return loc, key
     print '\nWorking...'
     shutil.copytree(loc, loc + 'TEMP')          # always have some precautions!
+    backupStories(loc)
+    print '(... just in case)'
     print 'Decrypting using old key...'
     for File in os.listdir(loc + 'TEMP'):
         key = protect(loc + 'TEMP' + os.sep + File, 'w', key)
@@ -434,6 +437,11 @@ def changePass(key):                # Exhaustive method to change the password
     print success, 'Password has been changed!'
     return loc, key
 
+def backupStories(loc):
+    print 'Backing up to Desktop...'
+    zloc = os.path.expanduser('~/Desktop') + os.sep + "{d:%Y}{d:%m}{d:%d}".format(d = datetime.now())
+    shutil.make_archive(zloc, 'zip', loc)
+
 if __name__ == '__main__':
     loc, key, birthday, choice = configure()
     while choice == 'y':
@@ -446,22 +454,25 @@ if __name__ == '__main__':
                         " 3: View the story of someday",
                         " 4. Write the story for someday you've missed",
                         " 5. Search your stories",
-                        " 6. Change your password",
-                        " 7. Reconfigure your diary",)
+                        " 6. Backup your stories",
+                        " 7. Change your password",
+                        " 8. Reconfigure your diary",)
             print '\n\t\t'.join(choices)
             options =   ['key = write(key)',     # just to remember the password throughout the session
                         'key = random(key, birthday)',
                         'key = temp(hashDate(), key)',
                         'key = write(key, hashDate())',
                         'key = search(key, birthday)',
+                        'backupStories(loc)',
                         'loc, key = changePass(key)',
-                        'loc, key, choice = configure(True)']
+                        'loc, key, birthday, choice = configure(True)']
             try:
                 ch = int(raw_input('\nChoice: '))
                 if ch in range(1, len(choices)):
                     exec(options[int(ch)-1])
                 else:
                     print error, 'Please enter a value between 1 and %d!' % (len(choices) - 1)
+                    continue
             except (KeyboardInterrupt, EOFError, ValueError):
                 sleep(wait)
                 print error, "C'mon, quit playing around! Let's start writing..."

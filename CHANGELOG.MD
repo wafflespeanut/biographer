@@ -1,19 +1,16 @@
 ### Checklist
 
-- <s>fix the memory leak occurring while transferring the string pointer from Rust to Python</s>
-- update the encryption to use CBC
-- add ways to zip the stories (for backups)
-- use the hash of contents to check integrity and show warnings
-- <s>fix writing stories on Windows command prompt (where `KeyboardInterrupt` doesn't work!)</s>
+- Try the CBC encoding for one last time...
 
 ### Changelog
 
 <sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-v0.5.0: Biographer *(still checking out)*
-- Rust library can now be used for searching. It's damn fast! (by a factor of ~100)
-- Added some messages, improved the interface and a new parameter for the diary's configuration
-- Added an option for changing the password
+v0.5.0: Biographer
+- Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~100)
+- Added some messages and improved the interface
+- Added options for changing the password and for backing up stories
+- Updated the functions with an `EOFError` workaround to support the script on the Windows command prompt
 - Fixed some flaws in decryption (which has decreased the searching time by 20%)
 - Functions: `changePass(), pySearch(), protect(), temp(), protect(), write(), rustySearch()`
 
@@ -24,8 +21,8 @@ v0.4.1: [Anecdote](https://github.com/Wafflespeanut/anecdote/tree/6f7a80aa0ad24c
 - Functions: `search(), pySearch(), findStory(), grabStories(), random(), temp()`
 
 v0.4.0: [Memoir](https://github.com/Wafflespeanut/Memoir/tree/efc7cd4b15b1840c6b8d0a7c494690834e987cbe)
-- Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR.
-- No longer depends on text editors. It just prints the stories on the screen.
+- Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR
+- No longer depends on text editors. It just prints the stories on the screen
 - No longer stores passwords, but hashes them (with SHA-256) to allow authentication for a particular session (which means you have to sign-in at the start of every session). While local password storage appeals our minds, it was a *really* bad move!
 - Functions: `hashed(), shift(), CXOR(), temp(), protect(), write(), random(), search()`
 
