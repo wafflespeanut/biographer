@@ -1,8 +1,7 @@
 ### Checklist
 
 - <s>fix the memory leak occurring while transferring the string pointer from Rust to Python</s>
-- <s>add option for changing the password</s>
-- <s>improve the algorithm for faster decryption (abandon TEMP.tmp)</s>
+- update the encryption to use CBC
 - add ways to zip the stories (for backups)
 - use the hash of contents to check integrity and show warnings
 - <s>fix writing stories on Windows command prompt (where `KeyboardInterrupt` doesn't work!)</s>
@@ -13,7 +12,7 @@
 
 v0.5.0: Biographer *(still checking out)*
 - Rust library can now be used for searching. It's damn fast! (by a factor of ~100)
-- Added errors, warnings & success messages
+- Added some messages, improved the interface and a new parameter for the diary's configuration
 - Added an option for changing the password
 - Fixed some flaws in decryption (which has decreased the searching time by 20%)
 - Functions: `changePass(), pySearch(), protect(), temp(), protect(), write(), rustySearch()`
