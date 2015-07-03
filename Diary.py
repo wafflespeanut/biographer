@@ -24,7 +24,12 @@ success = "\n[SUCCESS]"
 wait = (0.1 if sys.platform == 'win32' else 0)
 # these 100ms sleep times at every caught EOFError is the workaround for interrupting properly in Windows
 
+newline = ('\n' if sys.platform == 'darwin' else '')
+# since OSX has only '\r' for newlines
+
 def rustySearch(key, pathList, word):           # FFI for giving the searching job to Rust
+    print error, 'Rust library has temporarily been disabled for including CBC!'
+    return [0] * len(pathList), 0
     if not os.path.exists(rustLib):
         print error, 'Rust library not found!'
         return [0] * len(pathList), 0
@@ -83,15 +88,36 @@ def shift(text, amount):            # Shifts the ASCII value of the chars
         return None
     return shiftedText
 
-def zombify(mode, data, key):       # Linking helper function
-    hexedKey = ''.join(hexed(key))
+def CBC(mode, data, power):         # Splits & chains into blocks
+    size = 2 ** power               # Each step of hexing doubles the bytes
+    if mode == 'e':
+        for i in range(power):
+            data = ''.join(hexed(data))
+        blocks = [os.urandom(size)] + [data[i:i+size] for i in range(0, len(data), size)]
+        for i in range(1, len(blocks)):
+            blocks[i] = CXOR(blocks[i-1], blocks[i])
+        return ''.join(blocks)
+    elif mode in ('d', 'w'):
+        blocks = [data[i:i+size] for i in range(0, len(data), size)]
+        for i in range(1, len(blocks))[::-1]:
+            blocks[i] = CXOR(blocks[i-1], blocks[i])
+        data = ''.join(blocks[1:])
+        for i in range(power):
+            try:
+                data = char(data)
+            except TypeError:
+                return None
+        return data
+
+def zombify(mode, data, key):       # Linking helper function (it can encrypt only once!)
+    hexedKey = ''.join(hexed(key))  # further encryption might render decryption impossible
     ch = sum([ord(i) for i in hexedKey])
     if mode == 'e':
-        text = ''.join(hexed(data))
-        return CXOR(shift(text, ch), key)
+        text = CBC('e', ''.join(hexed(data)), 3)        # (2 ** 3 == 8) byte blocks
+        return CXOR(shift(text, ch), key)           # CBC encode, shift and XOR
     elif mode in ('d', 'w'):
         text = shift(CXOR(data, key), 256 - ch)
-        return char(text)
+        return char(CBC('d', text, 3))              # do the reverse
 
 def temp(fileTuple, key):           # Decrypts and prints the story on the screen
     if type(fileTuple) == tuple:
@@ -150,7 +176,7 @@ def protect(path, mode, key):       # A simple method which shifts and turns it 
         print error, 'Nothing in file!'
         return key
     if mode == 'e':                 # a little stunt to strip '\r' from the lines
-        data = zombify(mode, ''.join(data.split('\r')), key)
+        data = zombify(mode, newline.join(data.split('\r')), key)
     else:
         data = zombify(mode, data, key)
     if not data:

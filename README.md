@@ -1,10 +1,10 @@
 ## Biographer (v0.5.0)
 
-This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) into a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Vigenere cipher using byte-wise XOR<sup>[1]</sup> (which can also detect incorrect passwords).
+This is a little project of mine - an utility to remember everyday memories. For now, it puts your stories (with a MD5-hashed filename) into a directory for later viewing. It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Vigenere cipher using byte-wise XOR and my modified CBC<sup>[1]</sup> (which can also detect incorrect passwords).
 
 Once stored, it doesn't disturb the original story (unless you play around). It decrypts to a temporary file for viewing, which also gets deleted almost immediately. While updating the stories, it just appends your story to the previous story.
 
-There's a SHA-256 hashing function which hashes the password into a local file, so that instead of typing the password every time you write/view some story, you can save it by signing in, but it requires at least one sign-in per session. And, the cool part - you can search through your stories for specific words (between a range of dates) either using Python or the provided Rust library. Regarding cross-platforms, I've made it to work on Windows & Linux, but I'm not sure about OSX (I guess it works).
+There's a SHA-256 hashing function which hashes the password into a local file, so that instead of typing the password every time you write/view some story, you can save it by signing in, but it requires at least one sign-in per session. And, the cool part - you can search through your stories for a specific word (between a range of dates) either using Python or the provided Rust library. Regarding cross-platforms, I've tested it on Windows 8 and Ubuntu, but I'm not sure about other OS (I guess it works for them just as well).
 
 <sup>[1]: **It's not at all secure!**, but that's not my goal either! (at least, not for now). We need confidentiality, not integrity. So, this is just to prevent people from peeking into the stories using text editors. Protecting the stories however, is *(always)* on your side. Well, if someone's really involved, then he'll be able to crack it in a few days.</sup>
 

@@ -1,6 +1,6 @@
 ### Checklist
 
-- Try the CBC encoding for one last time...
+- <s>Try the CBC encoding for one last time...</s>
 
 ### Changelog
 
