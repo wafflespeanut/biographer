@@ -6,9 +6,10 @@ from hashlib import md5, sha256
 from time import sleep
 from timeit import default_timer as timer
 
-ploc = os.path.expanduser('~') + os.sep + '.diary'      # Config location (absolute)
-libName = ('biographer.dll' if sys.platform == 'win32' else 'libbiographer.dylib' if sys.platform == 'darwin' else 'libbiographer.so')
-rustLib = "target/release/" + libName                   # Library location (relative)
+ploc = os.path.expanduser('~') + os.sep + '.diary'              # Config location (absolute)
+prefix = {'win32': ''}.get(sys.platform, 'lib')
+ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
+rustLib = "target/release/" + prefix + 'biographer' + ext       # Library location (relative)
 # And, you'll be needing Nightly rust (v1.3.0), because this library depends on a future method
 
 error = "\n[ERROR]"
@@ -80,15 +81,12 @@ def CXOR(text, key):                # Byte-wise XOR
 
 def shift(text, amount):            # Shifts the ASCII value of the chars
     try:
-        shiftedText = ''
-        for i, ch in enumerate(text):
-            shiftChar = (ord(ch) + amount) % 256
-            shiftedText += chr(shiftChar)
+        shiftedText = (chr((ord(ch) + amount) % 256) for ch in text)
     except TypeError:
         return None
-    return shiftedText
+    return ''.join(shiftedText)
 
-def CBC(mode, data, power):         # Splits & chains into blocks
+def CBC(mode, data, power):         # Splits & chains into blocks (for some randomness)
     size = 2 ** power               # Each step of hexing doubles the bytes
     if mode == 'e':
         for i in range(power):
@@ -111,7 +109,7 @@ def CBC(mode, data, power):         # Splits & chains into blocks
 
 def zombify(mode, data, key):       # Linking helper function (it can encrypt only once!)
     hexedKey = ''.join(hexed(key))  # further encryption might render decryption impossible
-    ch = sum([ord(i) for i in hexedKey])
+    ch = sum((ord(i) for i in hexedKey))
     if mode == 'e':
         text = CBC('e', ''.join(hexed(data)), 3)        # (2 ** 3 == 8) byte blocks
         return CXOR(shift(text, ch), key)           # CBC encode, shift and XOR
@@ -408,7 +406,7 @@ def search(key, birthday):
     else:
         print '\nTime taken:', timing, 'seconds!\n\nBummer! No matching words...'
         return key
-    # splitting into () pairs for later use
+    # splitting into tuple pairs for later use (only if there exists a non-zero word count)
     results = [(fileData[0][i], fileData[1][i]) for i, count in enumerate(wordCount) if count]
     for i, data in enumerate(results):
         print str(i + 1) + '. ' + data[1]       # print only the datetime

@@ -1,13 +1,9 @@
-### Checklist
-
-- try to implement parallelization in Rust's search
-
 ### Changelog
 
 <sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
 v0.5.0: Biographer
-- Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~100)
+- Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~100), even after neglecting *concurrency* (which takes that factor up to ~350 times).
 - Added some messages and improved the interface
 - Added options for changing the password and for backing up stories
 - Updated the functions with an `EOFError` workaround to support the script on the Windows command prompt

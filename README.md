@@ -4,11 +4,11 @@ This is a little project of mine - a command-line utility to remember everyday m
 
 It puts your stories (with a MD5-hashed filename) into a directory for later viewing. Once stored, it doesn't disturb the original story (unless you play around). It decrypts to a temporary file for viewing, which also gets deleted almost immediately. While updating the stories, it just appends your story to the previous story.
 
-It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Vigenere cipher using byte-wise XOR along with [cipher-block chaining](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29) to introduce some randomness<sup>[1]</sup> (and, it can also detect incorrect passwords).
+It supports some basic encryption. I've used a simple algorithm to hex and shift the ASCII values in the files, which is similar to a *hexed* 256-char Vigenere cipher using byte-wise XOR along with [cipher-block chaining](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29) to introduce some *randomness* into the final ciphertext<sup>[1]</sup> (and, it can also detect incorrect passwords).
 
-There's a SHA-256 hashing function which hashes the password into a local file, so that instead of typing the password every time you write/view some story, you can save it by signing in, but it requires at least one sign-in per session *(of course!)*.
+A local file has a SHA-256 hash of the original password, so that instead of typing the password every time you write/view some story, you can simply sign in, which asks you for a password only once per session *(of course!)*.
 
-And, the cool part - you can search through your stories for a specific word (between a range of dates) either using Python or the provided Rust library. Mind you, it's a very basic search. It looks for an exact match, and so it's case-sensitive).
+And, the cool part - you can search through your stories for a specific word (between a range of dates) either using Python (which takes some time, depending on the number of stories you have) or the provided Rust library (which amplifies the performance by a factor of ~200). But, it's a very basic search - it just looks for an exact match, and so it's case-sensitive).
 
 Regarding cross-platforms, I've tested it on Windows 8 and Ubuntu, but I'm not sure about other OS (I guess it works for them just as well).
 
