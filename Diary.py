@@ -28,8 +28,6 @@ newline = ('\n' if sys.platform == 'darwin' else '')
 # since OSX has only '\r' for newlines
 
 def rustySearch(key, pathList, word):           # FFI for giving the searching job to Rust
-    print error, 'Rust library has temporarily been disabled for including CBC!'
-    return [0] * len(pathList), 0
     if not os.path.exists(rustLib):
         print error, 'Rust library not found!'
         return [0] * len(pathList), 0
@@ -44,8 +42,10 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
 
     start = timer()
     c_array = (ctypes.c_char_p * len(list_to_send))(*list_to_send)
+    print 'Sending the list (as C-array) to Rust...'
     c_pointer = lib.get_stuff(c_array, len(list_to_send))
     count_string = ctypes.c_char_p(c_pointer).value
+    print 'Got the string. Sending the pointer back for destruction...'
     lib.kill_pointer(c_pointer)     # sending the pointer back to Rust for destruction
     occurrences = [int(i) for i in count_string.split(' ')]
     stop = timer()
