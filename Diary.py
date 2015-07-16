@@ -1,20 +1,22 @@
-execfile("src/core.py")
-execfile("src/cipher.py")
-execfile("src/options.py")
-execfile("src/search.py")
+import sys
+path = (sys.argv[0][:-8] if sys.argv[0] else '')
+
+execfile(path + "src/core.py")
+execfile(path + "src/cipher.py")
+execfile(path + "src/options.py")
+execfile(path + "src/search.py")
 
 # [Conventions used here]
 # fileTuple = (file_path, formatted_datetime) returned by hashDate()
 # dataTuple = (file_contents, key) returned by protect()
 # fileData = list(word_counts) for each file sorted by date, returned by the searching functions
-# 'birthday' of the diary is important because random stories and searching is based on that
-# every EOFError was added just to make this script work on Windows (honestly, Windows sucks!)
 
 wait = (0.1 if sys.platform == 'win32' else 0)
-# these 100ms sleep times at every caught EOFError is the workaround for interrupting properly in Windows
+# these 100ms sleep times at every KeyboardInterrupt is the workaround for catching EOFError properly in Windows
 
 if __name__ == '__main__':
     loc, key, birthday, choice = configure()
+    # 'birthday' of the diary is important because random stories and searching is based on that
     while choice == 'y':
         try:
             if not sys.platform == 'linux':
@@ -51,6 +53,7 @@ if __name__ == '__main__':
         except Exception as err:        # Well, you have to sign-in for each session!
             print error, 'Ah, something bad has happened! Did you do it?'
         except (KeyboardInterrupt, EOFError):
+            # EOFError was added just to make this script work on Windows (honestly, Windows sucks!)
             choice = raw_input('\n' + warning + ' Interrupted! Do something again (y/n)? ')
     if choice is not 'y':
         print '\nGoodbye...'

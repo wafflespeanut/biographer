@@ -6,8 +6,8 @@ from timeit import default_timer as timer
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
-rustLib = "target/release/" + prefix + 'biographer' + ext       # Library location (relative)
-# And, you'll be needing Nightly rust (v1.3.0), because this library depends on a future method
+rustLib = path + 'target/release/' + prefix + 'biographer' + ext       # Library location (relative)
+# And, you'll be needing Nightly rust (v1.3.0), because the library depends on a future method
 
 def findStory(delta, birthday):     # Finds the file name using the timedelta from the birth of the diary to a specified date
     stories = len(os.listdir(loc))
@@ -66,11 +66,9 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
 
     start = timer()
     c_array = (ctypes.c_char_p * len(list_to_send))(*list_to_send)
-    print 'Sending the list (as C-array) to Rust...'
-    c_pointer = lib.get_stuff(c_array, len(list_to_send))
+    c_pointer = lib.get_stuff(c_array, len(list_to_send))       # sending the list (as C-array) to Rust..
     count_string = ctypes.c_char_p(c_pointer).value
-    print 'Got the string. Sending the pointer back for destruction...'
-    lib.kill_pointer(c_pointer)     # sending the pointer back to Rust for destruction
+    lib.kill_pointer(c_pointer)     # sending the pointer back to Rust for destruction!
     occurrences = [int(i) for i in count_string.split(' ')]
     stop = timer()
     return occurrences, (stop - start)
@@ -113,17 +111,19 @@ def search(key, birthday):          # this invokes the other two searching funct
         print '\nTime taken:', timing, 'seconds!\n\nBummer! No matching words...'
         return key
     # splitting into tuple pairs for later use (only if there exists a non-zero word count)
-    results = [(fileData[0][i], fileData[1][i]) for i, count in enumerate(wordCount) if count]
+    results = [(fileData[0][i], fileData[1][i], count) for i, count in enumerate(wordCount) if count]
     for i, data in enumerate(results):
-        print str(i + 1) + '. ' + data[1]           # print only the datetime
+        numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
+        spaces = 40 - len(numbered)                 # some formatting for the counts
+        print numbered, spaces * ' ', '[ %s ]' % data[2]      # print only the datetime and counts in each file
     print '\nTime taken:', timing, 'seconds!'
-    print success, 'Found %d occurrences in %d stories!\n' % (sum(wordCount), len(results))
+    print success, 'Found a total of %d occurrences in %d stories!\n' % (sum(wordCount), len(results))
     while fileData:
         try:
             ch = int(raw_input("Enter the number to see the corresponding story ('0' to exit): "))
             if ch == 0:
                 return key
-            temp((results[ch-1][0], results[ch-1][1]), key)
+            temp((results[ch-1][0], results[ch-1][1]), key)         # filter the fileTuple
         except Exception:
             print error, 'Oops! Bad input...\n'
     return key

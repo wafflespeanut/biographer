@@ -1,4 +1,4 @@
-import os, sys
+import os
 from time import sleep
 from getpass import getpass
 from hashlib import md5, sha256
@@ -120,6 +120,7 @@ def write(key, fileTuple = None):   # Does all those dirty writing job
             return None
         else:
             print '\nStory already exists! Appending to the current story...'
+            print '(filename hash: %s)' % fileTuple[0].split(os.sep)[-1]        # useful for finding the file
     timestamp = str(datetime.now()).split('.')[0].split(' ')
     data = ['[' + timestamp[0] + '] ' + timestamp[1] + '\n']
     try:
