@@ -3,11 +3,12 @@
 
 import ctypes
 from timeit import default_timer as timer
+from collections import Counter
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
 rustLib = path + 'target/release/' + prefix + 'biographer' + ext       # Library location (relative)
-# And, you'll be needing Nightly rust (v1.3.0), because the library depends on a future method
+# And, you'll be needing Nightly rust (v1.3.0), because the library depends on a future method and a deprecated method
 
 def findStory(delta, birthday):     # Finds the file name using the timedelta from the birth of the diary to a specified date
     stories = len(os.listdir(loc))
@@ -28,7 +29,7 @@ def grabStories(delta, date):       # Grabs the story paths for a given datetime
     return fileData
 
 def pySearch(key, files, word):     # Exhaustive process (that's why I've written a Rust library for this!)
-    occurrences = []                # Rust is about ~230 times faster than Python (in this searching)
+    occurrences = []                # Rust library accelerates the search by about ~230 times!
     displayProg, printed = 0, False
     total = len(files)
     start = timer()
@@ -41,12 +42,14 @@ def pySearch(key, files, word):     # Exhaustive process (that's why I've writte
         dataTuple = protect(File, 'd', key)
         if dataTuple:
             data, key = dataTuple
-            occurred = data.count(word)
+            counter = Counter(data.split())     # built-in Counter instead of `count` method for a future search option
+            occurred = counter[word]
         else:
             print warning, 'Cannot decrypt story! Skipping... (filename hash: %s)\n' % File.split(os.sep)[-1]
         occurrences.append(occurred)
         if not printed:
-            print 'Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(occurrences))
+            sys.stdout.write('\r  Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(occurrences)))
+            sys.stdout.flush()
             printed = True
     stop = timer()
     return occurrences, (stop - start)
@@ -74,8 +77,9 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
     return occurrences, (stop - start)
 
 def search(key, birthday):          # this invokes the other two searching functions and gathers their output
-    word = raw_input("Enter a word: ")
     choice = 0
+    os.system('cls' if os.name == 'nt' else 'clear')
+    word = raw_input("\nEnter a word: ")      # <checklist> support more words in query
     while choice not in (1, 2, 3):
         choices = ('\n\t1. Search everything! (Python)',
                     '2. Search between two dates (Python)',

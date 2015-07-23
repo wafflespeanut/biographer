@@ -9,7 +9,7 @@ def random(key, birthday):          # Useful only when you have a lot of stories
     stories = len(os.listdir(loc))
     for i in range(10):
         ch = rchoice(range(stories))
-        fileName = findStory(ch, birthday)      # function is inside `search` module
+        fileName = findStory(ch, birthday)
         if fileName:
             return temp(fileName, key)
     print '\nPerhaps, this may not be a valid path after all...'
@@ -21,6 +21,8 @@ def backupStories(loc):
     shutil.make_archive(zloc, 'zip', loc)
 
 def changePass(key):                # Exhaustive method to change the password
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print "\nLet's change your password..."
     if not getpass('\nOld password: ') == key:
         print error, 'Wrong password!'
         return loc, key

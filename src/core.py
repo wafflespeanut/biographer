@@ -30,13 +30,16 @@ def hashed(hashFunction, text):     # Hashing function (could be MD5 or SHA-256)
     hashObject.update(text)
     return hashObject.hexdigest()
 
+def hashFormat(datetime):
+    return hashed(md5, 'Day {date:%d} ({date:%B} {date:%Y})'.format(date = datetime))
+
 def hashDate(year = 0, month = 0, day = 0):     # Return a path based on (day, month, year) input
     date = askDate(year, month, day)
-    fileName = loc + hashed(md5, 'Day {date:%d} ({date:%B} {date:%Y})'.format(date = date))
+    fileName = loc + hashFormat(date)
     if not os.path.exists(fileName):
         if date > datetime.now():
             print error, "You can't just time-travel into the future!"
-            return 'blah'
+            return 'blah!'
         print error, 'No stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
         return None
     story = '{date:%B} {date:%d}, {date:%Y} ({date:%A})'.format(date = date)
@@ -101,14 +104,15 @@ newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX has only
 
 def write(key, fileTuple = None):   # Does all those dirty writing job
     keyComb = 'Ctrl+C'
+    now = datetime.now()
+    os.system('cls' if os.name == 'nt' else 'clear')
     if sys.platform == 'win32':
         print warning, "If you're using the command prompt, don't press %s while writing!" % keyComb
         keyComb = 'Ctrl+Z and [Enter]'
     if not fileTuple:
-        now = datetime.now()
-        date = hashed(md5, 'Day ' + now.strftime('%d') + ' (' + now.strftime('%B') + ' ' + now.strftime('%Y') + ')')
+        dateHash = hashFormat(now)
         story = '{date:%B} {date:%d}, {date:%Y} ({date:%A}) ...'.format(date = now)
-        fileTuple = (loc + date, story)
+        fileTuple = (loc + dateHash, story)
     elif type(fileTuple) == str:
         return key
     File = fileTuple[0]
@@ -121,7 +125,7 @@ def write(key, fileTuple = None):   # Does all those dirty writing job
         else:
             print '\nStory already exists! Appending to the current story...'
             print '(filename hash: %s)' % fileTuple[0].split(os.sep)[-1]        # useful for finding the file
-    timestamp = str(datetime.now()).split('.')[0].split(' ')
+    timestamp = str(now).split('.')[0].split(' ')
     data = ['[' + timestamp[0] + '] ' + timestamp[1] + '\n']
     try:
         stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
@@ -152,9 +156,18 @@ def temp(fileTuple, key):           # Decrypts and prints the story on the scree
     if type(fileTuple) == tuple:
         dataTuple = protect(fileTuple[0], 'd', key)
         if dataTuple:
+            count = 0
             data, key = dataTuple
+            os.system('cls' if os.name == 'nt' else 'clear')
             print '\nYour story from', fileTuple[1], '...'
-            print "\n<----- START OF STORY ----->\n\n", data, "<----- END OF STORY ----->\n"
+            for word in data.split():
+                try:
+                    timestamp = datetime.strptime(word, '[%Y-%m-%d]')
+                    count += 1
+                except ValueError:
+                    continue
+            print "\n<----- START OF STORY -----> (%d words)\n\n" % (len(data.split()) - count)
+            print data, "<----- END OF STORY ----->\n"
             return key
         else:
             return None
@@ -164,19 +177,22 @@ def temp(fileTuple, key):           # Decrypts and prints the story on the scree
         return None
 
 def configure(delete = False):      # Configuration file for authentication
-    try:
+    try:                            # Well, you have to sign-in for each session!
         choice = 'y'
         if os.path.exists(ploc) and not delete:
             print '\nConfiguration file found!'
             with open(ploc, 'r') as file:
                 config = file.readlines()
-            if len(config) == 3:
+            try:
                 loc = config[1].strip()
-                birthday = datetime.strptime(config[-1].strip(), '%Y-%m-%d')
+                assert os.path.exists(loc)
+                birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
                 key = check()
                 if type(key) is not str:
                     return None, None, None, 'n'
-            else:
+            except Exception:
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print '\nInvalid configuration!'
                 delete = True       # consider this as an invalid configuration
         if delete:
             if os.path.exists(ploc):
@@ -184,7 +200,9 @@ def configure(delete = False):      # Configuration file for authentication
                 os.remove(ploc)
             else:
                 print error, 'Configuration file has already been removed!'
+            sleep(2)        # waiting for the user to see the message (before it gets cleared)
         if not os.path.exists(ploc):
+            os.system('cls' if os.name == 'nt' else 'clear')
             print "\nLet's start configuring your diary...\n"
             loc = raw_input('Enter the (absolute) location for your diary: ')
             while not os.path.exists(loc):
@@ -200,6 +218,9 @@ def configure(delete = False):      # Configuration file for authentication
                         birthday = datetime.now()
                     else:
                         birthday = datetime.strptime(birth, '%Y-%m-%d')
+                        dateHash = hashFormat(birthday)
+                        if not os.path.exists(loc + dateHash):
+                            print warning, "Story doesn't exist on that day!"
                 except ValueError:
                     print error, 'Oops! Error in input. Try again...'
                     continue
@@ -210,7 +231,9 @@ def configure(delete = False):      # Configuration file for authentication
                 return None, None, None, 'n'
             with open(ploc, 'a') as file:
                 file.writelines([loc + '\n' + birth])   # Store the location & birth of diary along with the password hash
+            print "If you plan to reconfigure it manually, then it's located here (%s)" % ploc
+            print "And, be careful with that, because invalid configuration files will be deleted during startup!"
     except (KeyboardInterrupt, EOFError):
         sleep(wait)
-        return None, None, None, 'n'
+        sys.exit('\n\nGoodbye...')
     return loc, key, birthday, choice

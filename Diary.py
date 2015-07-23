@@ -1,10 +1,15 @@
 import sys
-path = (sys.argv[0][:-8] if sys.argv[0] else '')
+path = (sys.argv[0][:-8] if sys.argv[0] else '')        # find the location of Diary.py (when run in command-line)
 
-execfile(path + "src/core.py")
-execfile(path + "src/cipher.py")
-execfile(path + "src/options.py")
-execfile(path + "src/search.py")
+try:
+    execfile(path + "src/core.py")
+    execfile(path + "src/cipher.py")
+    execfile(path + "src/options.py")
+    execfile(path + "src/search.py")
+except IOError:
+    print "\n[ERROR] Hmm, looks like you've executed the diary in some bad way!"
+    print '\nEither `cd` into the folder and execute it, or call it using `python /path/to/Diary.py`\n'
+    sys.exit(0)
 
 # [Conventions used here]
 # fileTuple = (file_path, formatted_datetime) returned by hashDate()
@@ -19,9 +24,10 @@ if __name__ == '__main__':
     # 'birthday' of the diary is important because random stories and searching is based on that
     while choice == 'y':
         try:
-            if not sys.platform == 'linux':
+            os.system('cls' if os.name == 'nt' else 'clear')
+            if 'linux' not in sys.platform:
                 print '\n### This program runs best on Linux terminal ###'
-            choices = ('\n\tWhat do you wanna do?\n',
+            choices = ("\n\tWhat do you wanna do?\n",
                         " 1: Write today's story",
                         " 2: Random story",
                         " 3: View the story of someday",
@@ -29,29 +35,36 @@ if __name__ == '__main__':
                         " 5. Search your stories",
                         " 6. Backup your stories",
                         " 7. Change your password",
-                        " 8. Reconfigure your diary",)
+                        " 8. Reconfigure your diary",
+                        " 9. Exit the biographer",)
             print '\n\t\t'.join(choices)
-            options =   ['key = write(key)',     # just to remember the password throughout the session
-                        'key = random(key, birthday)',
-                        'key = temp(hashDate(), key)',
-                        'key = write(key, hashDate())',
-                        'key = search(key, birthday)',
-                        'backupStories(loc)',
-                        'loc, key = changePass(key)',
-                        'loc, key, birthday, choice = configure(True)']
+            options =   ("key = write(key)",     # just to remember the password throughout the session
+                        "key = random(key, birthday)",
+                        "key = temp(hashDate(), key)",
+                        "key = write(key, hashDate())",
+                        "key = search(key, birthday)",
+                        "backupStories(loc)",
+                        "loc, key = changePass(key)",
+                        "loc, key, birthday, choice = configure(True)",
+                        "print; sys.exit('Goodbye...')",)
             try:
                 ch = int(raw_input('\nChoice: '))
                 if ch in range(1, len(choices)):
                     exec(options[int(ch)-1])
                 else:
                     print error, 'Please enter a value between 1 and %d!' % (len(choices) - 1)
+                    sleep(2)
                     continue
             except (KeyboardInterrupt, EOFError, ValueError):
                 sleep(wait)
-                print error, "C'mon, quit playing around! Let's start writing..."
+                print error, "C'mon, quit playing around!"
+                sleep(2)
+                continue
             choice = raw_input('\nDo something again (y/n)? ')
-        except Exception as err:        # Well, you have to sign-in for each session!
-            print error, 'Ah, something bad has happened! Did you do it?'
+        except Exception as err:
+            print error, 'Ah, something bad has happened! Maybe reconfigure your diary?'
+            sleep(2)
+            continue
         except (KeyboardInterrupt, EOFError):
             # EOFError was added just to make this script work on Windows (honestly, Windows sucks!)
             choice = raw_input('\n' + warning + ' Interrupted! Do something again (y/n)? ')

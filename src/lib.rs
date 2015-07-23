@@ -22,7 +22,7 @@ pub extern fn kill_pointer(p: *const c_char) {
     unsafe { CString::from_ptr(p) };     // Theoretically, Rust should take the ownership back
 }   // variable goes out of scope here and the C-type string should be destroyed (at least, that's what I hope)
 
-// FFI function to be called from Python
+// FFI function to be called from Python (I've commented out some of the methods I had tried)
 #[no_mangle]
 pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c_char {
     // get the raw pointer values to the strings from the array pointer
@@ -91,7 +91,7 @@ fn search(text: &Vec<u8>, word: &str) -> u8 {
 }
 
 // This just decrypts the file and counts the word in it (just to simplify things)
-fn count_words(file_name: &str, key: &str, word: &str) -> String {
+fn count_words(file_name: &str, key: &str, word: &str) -> String {      // <checklist> take an array of &str instead
     let contents = fopen(&file_name).1;
     let decrypted = cipher::zombify(0, &contents, key);
     search(&decrypted, word).to_string()
