@@ -10,20 +10,20 @@ A local file has a SHA-256 hash of the original password, so that instead of typ
 
 And, the cool part - you can search through your stories for a specific word (between a range of dates) either using Python (which takes some time, depending on the number of stories you have) or the provided Rust library (which amplifies the performance by a factor of ~230). But, it's a very basic search - it just looks for an exact match, and so it's case-sensitive).
 
-Regarding cross-platforms, I've tested it on Windows 8 and Ubuntu, but I'm not sure about other OS (I guess it works for them just as well).
+Regarding cross-platforms, I've tested it on Windows 8 and Ubuntu, but I'm not sure about other OS (I guess it works for them just as well). Oh, it also runs on Android (if you've got [QPython](https://play.google.com/store/apps/details?id=com.hipipal.qpyplus)) installed.
 
 <sup>[1]: **It's not much secure!**, but that's not my goal either! We need confidentiality, not integrity. So, this is just to prevent people from peeking into the stories using text editors. Protecting the stories however, is *(always)* on your side. Well, if someone's really involved, then he'll be able to crack it in a few days.</sup>
 
 ### Usage
 
-**The script runs best on Linux terminal** (by which I mean the display, speed, and specifically `KeyboardInterrupt`, which is necessary for navigation throughout the program). Running on IDEs isn't recommended as they expose your password, do it at your risk.
+**The script runs best on Linux terminal** (by which I mean the display, speed, and specifically `KeyboardInterrupt`, which is necessary for navigation throughout the program). Running on IDEs isn't recommended as they expose your password, [do it at your own risk](https://en.wikipedia.org/wiki/Shoulder_surfing_%28computer_security%29).
 
-As for Windows users, since your command prompts suck, things work quite (slowly and) differently for you. For example, a `KeyboardInterrupt` almost always terminates the program. So, I had to make use of `EOF` to work around it, which means you have to use <kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Enter</kbd> instead of <kbd>Ctrl</kbd>+<kbd>C</kbd>.
+As for Windows users, since your command prompts *suck*, things work quite (slowly and) differently for you. For example, a `KeyboardInterrupt` almost always terminates the program. So, I had to make use of `EOF` to work around it, which means you have to use <kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Enter</kbd> instead of <kbd>Ctrl</kbd>+<kbd>C</kbd>.
 
 ### Installation
 
 - Clone the repo (or download the zip). **Note that you'll need Python first!**
-- It'd be best if you have `python` in your path environment variable. You can just execute `python /path/to/Diary.py`.
+- It'd be best if you have `python` in your path environment variable. You can just execute `python /path/to/main.py`.
 - If you're really interested in using the Rust library for searching (which is gonna be useful only if you have some appreciable amount of stories already), then download the [nightly version of Rust](http://www.rust-lang.org/install.html) (v1.3.0), `cd` into the folder and run `cargo build --release` and make sure that you're compiling from and for the right architecture (i.e., 32-bit Rust for 32-bit Python)
 
 - <small>Or, if you've got a **64-bit** system, then let me save your time - you can just download the compiled library for [Windows](https://www.dropbox.com/s/j0963wmtx0vfty8/biographer.dll?dl=1) or [Linux](https://www.dropbox.com/s/9i7ex3jfsf8yetx/libbiographer.so?dl=1) and put it into `target/release/`</small> inside your cloned repo.

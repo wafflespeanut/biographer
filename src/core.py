@@ -1,14 +1,30 @@
-import os
 from time import sleep
 from getpass import getpass
 from hashlib import md5, sha256
 from datetime import datetime, timedelta
 
-ploc = os.path.expanduser('~') + os.sep + '.diary'      # Config location (absolute)
-
 error = "\n[ERROR]"
 warning = "\n[WARNING]"
 success = "\n[SUCCESS]"
+
+def writeAccess(path):
+    try:
+        with open(path + os.sep + 'TEMP.bak', 'w') as file:
+            file.writelines([''])
+        os.remove(path + os.sep + 'TEMP.bak')
+        return True
+    except IOError:
+        return False
+
+if not writeAccess(os.path.expanduser('~')):
+    print error, "Couldn't get write access to home directory! Checking if the device is a mobile..."
+    if not writeAccess('/mnt/sdcard'):      # QPython uses `/data` as home directory, and so let's try with `/mnt/sdcard`
+        print error, "Oops... Bad luck! Couldn't get write access to sd-card!"
+        sys.exit("\nGoodbye...")
+    ploc = '/mnt/sdcard/.diary'
+    print warning, 'If you plan to offer write acces to the home directory, move the config file from sd-card (%s) \
+to your home directory (%s)' % (ploc, os.path.expanduser('~/.diary'))
+    sleep(10)
 
 def askDate(year = 0, month = 0, day = 0):      # Get the date from user
     while True:
@@ -205,11 +221,10 @@ def configure(delete = False):      # Configuration file for authentication
             os.system('cls' if os.name == 'nt' else 'clear')
             print "\nLet's start configuring your diary...\n"
             loc = raw_input('Enter the (absolute) location for your diary: ')
-            while not os.path.exists(loc):
-                print error, 'No such path exists!'
+            while not (os.path.exists(loc) and writeAccess(loc)):
+                print error, "Couldn't get write access to the path!"
                 loc = raw_input('Please enter a valid path: ')
-            if not loc[-1] == os.sep:
-                loc += os.sep
+            loc += os.sep
             while True:
                 try:
                     print '\nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)'

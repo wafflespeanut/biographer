@@ -1,5 +1,13 @@
-import sys
-path = (sys.argv[0][:-8] if sys.argv[0] else '')        # find the location of Diary.py (when run in command-line)
+import os, sys
+
+execFolder = sys.argv[0]            # check whether path is given as an argument
+if 'biographer' not in execFolder:
+    execFolder = [path for path in sys.path if 'biographer' in path][0]
+listPath = execFolder.split(os.sep)         # else, search for the path in the list of paths
+i = listPath.index('biographer') + 1
+path = str(os.sep).join(listPath[:i]) + os.sep      # all these stunts are for making this to work in QPython (Android)
+
+ploc = os.path.expanduser('~') + os.sep + '.diary'      # config location (absolute)
 
 try:
     execfile(path + "src/core.py")
