@@ -17,7 +17,7 @@ def random(key, birthday):          # Useful only when you have a lot of stories
 
 def backupStories(loc):
     print 'Backing up to Desktop...'
-    zloc = os.path.expanduser('~/Desktop') + os.sep + "{d:%Y}{d:%m}{d:%d}".format(d = datetime.now())
+    zloc = os.path.join(os.path.expanduser('~/Desktop'), "{d:%Y}{d:%m}{d:%d}".format(d = datetime.now()))
     shutil.make_archive(zloc, 'zip', loc)
 
 def changePass(key):                # Exhaustive method to change the password
@@ -34,27 +34,28 @@ def changePass(key):                # Exhaustive method to change the password
         print error, "Passwords don't match!"
         return loc, key
     print '\nWorking...'
-    shutil.copytree(loc, loc + 'TEMP')          # always have some precautions!
+    temp_loc = loc + 'TEMP'
+    shutil.copytree(loc, temp_loc)          # always have some precautions!
     backupStories(loc)
     print '(... just in case)'
     print 'Decrypting using old key...'
-    for File in os.listdir(loc + 'TEMP'):
-        key = protect(loc + 'TEMP' + os.sep + File, 'w', key)
+    for File in os.listdir(temp_loc):
+        key = protect(os.path.join(temp_loc, File), 'w', key)
         if key == None:
-            os.rmdir(loc + 'TEMP')
+            os.rmdir(temp_loc)
             print error, "This file couldn't be decrypted! (filename hash: %s)\nResolve it before changing the password..." % File
             return loc, key
     print 'Encrypting using the new key...'
-    for File in os.listdir(loc + 'TEMP'):
-        key = protect(loc + 'TEMP' + os.sep + File, 'e', newKey)
+    for File in os.listdir(temp_loc):
+        key = protect(os.path.join(temp_loc, File), 'e', newKey)
     print "Overwriting the existing stories... (Please don't interrupt now!)"
     for File in os.listdir(loc):
         try:
             os.remove(loc + File)
-            os.rename(loc + 'TEMP' + os.sep + File, loc + File)
+            os.rename(os.path.join(temp_loc, File), loc + File)
         except OSError:
             continue                # This should leave our temporary folder
-    os.rmdir(loc + 'TEMP')
+    os.rmdir(temp_loc)
     print 'Modifying the configuration file...'
     with open(ploc, 'w') as file:
         file.writelines([hashed(sha256, key), '\n', loc])

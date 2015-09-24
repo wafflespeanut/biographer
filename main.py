@@ -1,23 +1,11 @@
-import os, sys
+import inspect, os, sys
 
-execFolder = sys.argv[0]            # check whether path is given as an argument
-if 'biographer' not in execFolder:
-    execFolder = [path for path in sys.path if 'biographer' in path][0]
-listPath = execFolder.split(os.sep)         # else, search for the path in the list of paths
-i = listPath.index('biographer') + 1
-path = str(os.sep).join(listPath[:i]) + os.sep      # all these stunts are for making this to work in QPython (Android)
+filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
+path = os.path.dirname(os.path.abspath(filename))
 
-ploc = os.path.expanduser('~') + os.sep + '.diary'      # config location (absolute)
-
-try:
-    execfile(path + "src/core.py")
-    execfile(path + "src/cipher.py")
-    execfile(path + "src/options.py")
-    execfile(path + "src/search.py")
-except IOError:
-    print "\n[ERROR] Hmm, looks like you've executed the diary in some bad way!"
-    print '\nEither `cd` into the folder and execute it, or call it using `python /path/to/Diary.py`\n'
-    sys.exit(0)
+ploc = os.path.join(os.path.expanduser('~'), '.diary')              # config location (absolute)
+load_list = ["core.py", "cipher.py", "options.py", "search.py"]
+map(execfile, map(lambda string: os.path.join(path, "src", string), load_list))
 
 # [Conventions used here]
 # fileTuple = (file_path, formatted_datetime) returned by hashDate()

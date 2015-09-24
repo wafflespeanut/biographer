@@ -1,6 +1,6 @@
-#![feature(libc)]
-#![feature(scoped)]
-#![feature(cstr_memory)]
+#![feature(scoped, cstr_memory)]
+#![allow(unused_imports, deprecated)]
+
 extern crate libc;
 mod cipher;
 

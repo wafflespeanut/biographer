@@ -1,17 +1,17 @@
-from time import sleep
+from datetime import datetime, timedelta
 from getpass import getpass
 from hashlib import md5, sha256
-from datetime import datetime, timedelta
+from string import punctuation as punc
+from time import sleep
 
-error = "\n[ERROR]"
-warning = "\n[WARNING]"
-success = "\n[SUCCESS]"
+error, warning, success = "\n[ERROR]", "\n[WARNING]", "\n[SUCCESS]"
 
 def writeAccess(path):
     try:
-        with open(path + os.sep + 'TEMP.bak', 'w') as file:
+        temp = os.path.join(path, 'TEMP.bak')
+        with open(temp, 'w') as file:
             file.writelines([''])
-        os.remove(path + os.sep + 'TEMP.bak')
+        os.remove(temp)
         return True
     except IOError:
         return False
@@ -98,7 +98,7 @@ def check():        # Allows password to be stored locally
 
 def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuff
     with open(path, 'rb') as file:
-        data = ''.join(file.readlines())
+        data = file.read()
     if not len(data):
         print error, 'Nothing in file!'
         return key
@@ -132,10 +132,8 @@ def write(key, fileTuple = None):   # Does all those dirty writing job
     elif type(fileTuple) == str:
         return key
     File = fileTuple[0]
-    if os.path.exists(File) and os.path.getsize(File):
-        # "Intentionally" decrypting the original file
-        key = protect(File, 'w', key)
-        # an easy workaround to modify your original story
+    if os.path.exists(File) and os.path.getsize(File):  # "Intentionally" decrypting the original file
+        key = protect(File, 'w', key)   # an easy workaround to modify your original story
         if not key:
             return None
         else:
@@ -176,13 +174,15 @@ def temp(fileTuple, key):           # Decrypts and prints the story on the scree
             data, key = dataTuple
             os.system('cls' if os.name == 'nt' else 'clear')
             print '\nYour story from', fileTuple[1], '...'
-            for word in data.split():
-                try:
-                    timestamp = datetime.strptime(word, '[%Y-%m-%d]')
-                    count += 1
-                except ValueError:
-                    continue
-            print "\n<----- START OF STORY -----> (%d words)\n\n" % (len(data.split()) - count)
+            split_data = data.split()
+            for word in split_data:
+                if word not in punc:
+                    try:
+                        timestamp = datetime.strptime(word, '[%Y-%m-%d]')
+                        count += 2          # "2" for both date and time
+                    except ValueError:
+                        pass
+            print "\n<----- START OF STORY -----> (%d words)\n\n" % (len(split_data) - count)
             print data, "<----- END OF STORY ----->\n"
             return key
         else:

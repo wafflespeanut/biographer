@@ -2,7 +2,13 @@
 
 <sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-v0.5.0: Biographer
+v0.5.1 Biographer<sup> [\*] </sup>
+- Added support for QPython in Android
+- Added support for multi-word searching (using hashmaps)
+
+<small> [\*] Well, I think I'll just stick with biographer - it fits quite perfectly!</small>
+
+v0.5.0: [Biographer](https://github.com/Wafflespeanut/biographer/tree/c53ba745359424c991d089073bd7891f88e547d6)
 - Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~100), even before including *concurrency* (which amplifies the factor up to ~230).
 - Improved the code structure, interface & searching
 - Added a variety of options from changing the password to backing up stories
@@ -10,12 +16,12 @@ v0.5.0: Biographer
 - Fixed some flaws in decryption (which has decreased the searching time by 20%)
 - Encryption begins with CBC mode (with blocks of 8 bytes) - just to introduce some randomness in the ciphertext
 
-v0.4.1: [Anecdote](https://github.com/Wafflespeanut/anecdote/tree/6f7a80aa0ad24c299550e84e8d3ec0cf08bcbbc9)
+v0.4.1: [Anecdote](https://github.com/Wafflespeanut/biographer/tree/6f7a80aa0ad24c299550e84e8d3ec0cf08bcbbc9)
 - Improved search to suit the methods written for both Python & Rust
 - Replaced the exhaustive date & time with built-in `datetime` objects
 - Hashed password & diary location is stored in a configuration file
 
-v0.4.0: [Memoir](https://github.com/Wafflespeanut/Memoir/tree/efc7cd4b15b1840c6b8d0a7c494690834e987cbe)
+v0.4.0: [Memoir](https://github.com/Wafflespeanut/biographer/tree/efc7cd4b15b1840c6b8d0a7c494690834e987cbe)
 - Fixed a major flaw in the cipher. All these days, this has been consuming more time & memory. It's now been updated to a mixup of 256-char Caesar cipher and byte-wise XOR
 - No longer depends on text editors. It just prints the stories on the screen
 - No longer stores passwords, but hashes them (with SHA-256) to allow authentication for a particular session (which means you have to sign-in at the start of every session). While local password storage appeals our minds, it was a *really* bad move!

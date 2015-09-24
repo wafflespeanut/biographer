@@ -2,8 +2,8 @@
 # temp(), hashDate(), protect() - core.py
 
 import ctypes
-from timeit import default_timer as timer
 from collections import Counter
+from timeit import default_timer as timer
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
