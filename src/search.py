@@ -7,8 +7,8 @@ from timeit import default_timer as timer
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
-rustLib = path + 'target/release/' + prefix + 'biographer' + ext       # Library location (relative)
-# And, you'll be needing Nightly rust (v1.3.0), because the library depends on a future method and a deprecated method
+rustLib = os.path.join(path, 'target', 'release', prefix + 'biographer' + ext)    # Library location (relative)
+# And, you'll be needing Nightly rust (v1.5.0), because the library depends on a future method and a deprecated method
 
 def findStory(delta, birthday):     # Finds the file name using the timedelta from the birth of the diary to a specified date
     stories = len(os.listdir(loc))
