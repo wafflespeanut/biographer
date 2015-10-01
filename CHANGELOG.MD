@@ -4,7 +4,8 @@
 
 v0.5.1 Biographer<sup> [\*] </sup>
 - Added support for QPython in Android
-- Added support for multi-word searching (using hashmaps)
+- Fixed a bug that pops up while using concurrency for searching
+- <s>Added support for multi-word searching (using hashmaps)</s>
 
 <small> [\*] Well, I think I'll just stick with biographer - it fits quite perfectly!</small>
 

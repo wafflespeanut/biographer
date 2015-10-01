@@ -72,7 +72,10 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
     c_pointer = lib.get_stuff(c_array, len(list_to_send))       # sending the list (as C-array) to Rust..
     count_string = ctypes.c_char_p(c_pointer).value
     lib.kill_pointer(c_pointer)     # sending the pointer back to Rust for destruction!
-    occurrences = [int(i) for i in count_string.split(' ')]
+    occurrences = []
+    for i in count_string.split(' '):
+        idx = map(int, i.split(':'))
+        occurrences.append(idx[0])
     stop = timer()
     return occurrences, (stop - start)
 

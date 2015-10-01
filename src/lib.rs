@@ -43,27 +43,37 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
     // // basic concurrency (decreases the time by a factor of ~160)
     // let threads: Vec<_> = stuff
     //                       .into_iter()
-    //                       .map(|file_name| {
-    //                           thread::spawn(move || count_words(&file_name, &key, &word))
+    //                       .enumerate()
+    //                       .map(|(idx, file_name)| {
+    //                           thread::spawn(move || (idx, count_words(&file_name, &key, &word)))
     //                       }).collect();
-    // let occurrences: Vec<_> = threads
-    //                           .into_iter()
-    //                           .map(|handle| handle.join().unwrap())
-    //                           .collect();
+    // let mut result: Vec<_> = threads
+    //                          .into_iter()
+    //                          .map(|handle| handle.join().unwrap())
+    //                          .collect();
 
     // awesome channels (decrease the time by a factor of ~230)
     let (tx, rx) = mpsc::channel();
     let threads: Vec<_> = stuff
                           .into_iter()
-                          .map(|file_name| {
+                          .enumerate()
+                          .map(|(idx, file_name)| {
                               let tx = tx.clone();
                               thread::spawn(move || {   // send() the results as soon as they're done
-                                  tx.send(count_words(&file_name, &key, &word)).unwrap()
+                                  tx.send((idx, count_words(&file_name, &key, &word))).unwrap()
                               })
                           }).collect();
-    let occurrences: Vec<String> = threads
+    let mut result: Vec<(usize, String)> = threads
+                                           .iter()      // ... and recv() them later
+                                           .map(|_| rx.recv().unwrap())
+                                           .collect();
+
+    // sorting and remapping is necessary for output from threads (because they come in randomly)
+    // try commenting these out and you'll find randomized results in the search (making it error-prone)
+    result.sort_by(|&(idx_1, _), &(idx_2, _)| idx_1.cmp(&idx_2));
+    let occurrences: Vec<String> = result
                                    .iter()
-                                   .map(|_| rx.recv().unwrap())      // ... and recv() them later
+                                   .map(|&(_, ref string)| string.clone())
                                    .collect();
 
     let count_string = occurrences.join(" ");
@@ -79,20 +89,27 @@ fn fopen(path: &str) -> (usize, Vec<u8>) {
     (file_size, contents)
 }
 
-// Checks if the big vector contains the small vector slice
-fn search(text: &Vec<u8>, word: &str) -> u8 {
-    let mut count: u8 = 0;
-    if text.len() == 0 { return count; }        // that "Wrong password!" thing
-    let word_array = word.as_bytes();
-    let length = text.len() - word.len() + 1;
-    for i in 0..length {
-        if text[i..].starts_with(&word_array) { count += 1; }
-    } count
+// Checks if the big vector contains the small vector slice and returns a string of indices
+fn search(text_vec: &[u8], word: &str) -> String {
+    let null = "0".to_owned();
+    if text_vec.is_empty() {        // Wrong password!
+        return null;
+    } // we're safe here, because we've already filtered the "failure" case
+    let mut text = &*(String::from_utf8_lossy(text_vec));
+    let mut indices = Vec::new();
+    while let Some(idx) = text.find(word) {
+        text = &text[(idx + 1)..];
+        indices.push(idx.to_string());
+    }
+    match indices.is_empty() {
+        true => null,
+        false => indices.join(":"),
+    }
 }
 
 // This just decrypts the file and counts the word in it (just to simplify things)
-fn count_words(file_name: &str, key: &str, word: &str) -> String {      // <checklist> take an array of &str instead
+fn count_words(file_name: &str, key: &str, word: &str) -> String {
     let contents = fopen(&file_name).1;
     let decrypted = zombify(0, &contents, key);
-    search(&decrypted, word).to_string()
+    search(&decrypted, word)
 }

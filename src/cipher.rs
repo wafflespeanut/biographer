@@ -10,7 +10,7 @@ pub fn zombify(mode: u8, data: &Vec<u8>, key: &str) -> Vec<u8> {
     let mut amount: u8 = 0;
     for byte in hexed_key.as_bytes() {
         amount = amount.wrapping_add(*byte);
-    } let mut text: Vec<u8> = data.clone();
+    } let mut text = data.clone();
     if mode == 1 {  // encrypts the vector of bytes
         // but this won't be useful since the library is meant to only decrypt files (for now)
         text = data.to_hex().into_bytes();
@@ -39,7 +39,7 @@ fn charred(decode: Vec<u8>) -> Vec<u8> {
 }
 
 // Shifts the vector elements according to the given amount
-fn shift(text: &Vec<u8>, amount: u8) -> Vec<u8> {
+fn shift(text: &[u8], amount: u8) -> Vec<u8> {
     text.iter()
         // wrap around the boundary if the sum overflows
         .map(|byte| amount.wrapping_add(*byte))
@@ -47,7 +47,7 @@ fn shift(text: &Vec<u8>, amount: u8) -> Vec<u8> {
 }
 
 // Byte-wise XOR of vector elements according to a given string
-fn xor(text: &Vec<u8>, key: &str) -> Vec<u8> {
+fn xor(text: &[u8], key: &str) -> Vec<u8> {
     let mut xorred: Vec<u8> = Vec::new();
     let key_array = key.as_bytes();
     let (mut i, mut j) = (0, 0);
