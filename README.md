@@ -1,4 +1,4 @@
-## Biographer (v0.5.0)
+## Biographer (v0.5.1)
 
 This is a little project of mine - a command-line utility to remember everyday memories.
 

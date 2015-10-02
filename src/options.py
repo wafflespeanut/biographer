@@ -5,6 +5,40 @@
 import shutil
 from random import choice as rchoice
 
+colors = {
+    'R': '91',
+    'G': '92',
+    'Y': '93',
+    'B2': '94',
+    'P': '95',
+    'B1': '96',
+    'W': '97',
+    '0': '0',
+}
+
+def fmt(color):
+    return {'win32': ''}.get(sys.platform, '\033[' + colors[color] + 'm')
+
+def mark_text(text, indices, length, color = 'R'):  # Mark text and return corrected indices
+    text = list(text)
+    if sys.platform == 'win32':         # Damn OS doesn't even support coloring
+        return text, indices
+    formatter = fmt(color), fmt('0')
+    lengths = map(len, formatter)
+    i, limit = 0, len(indices)
+    new_indices = indices[:]
+    while i < limit:
+        idx = indices[i]
+        text[idx] = formatter[0] + text[idx]
+        text[idx + length - 1] += formatter[1]
+        new_indices[i] -= lengths[0]
+        j = i
+        while j < limit:
+            new_indices[j] += sum(lengths)
+            j += 1
+        i += 1
+    return ''.join(text), new_indices
+
 def random(key, birthday):          # Useful only when you have a lot of stories (obviously)
     stories = len(os.listdir(loc))
     for i in range(10):

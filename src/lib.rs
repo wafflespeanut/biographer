@@ -34,13 +34,13 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
     let word = stuff.pop().unwrap();
     let key = stuff.pop().unwrap();
 
-    // // pure iteration (decreases the time by a factor of ~120)
+    // // pure iteration (decreases the time by a factor of 110 ± 10)
     // let occurrences = stuff
     //                   .iter()
     //                   .map(|file_name| count_words(&file_name, &key, &word))
     //                   .collect::<Vec<String>>();
 
-    // // basic concurrency (decreases the time by a factor of ~160)
+    // // basic concurrency (decreases the time by a factor of 160 ± 10)
     // let threads: Vec<_> = stuff
     //                       .into_iter()
     //                       .enumerate()
@@ -52,7 +52,7 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
     //                          .map(|handle| handle.join().unwrap())
     //                          .collect();
 
-    // awesome channels (decrease the time by a factor of ~230)
+    // awesome channels (decrease the time by a factor of 220 ± 10)
     let (tx, rx) = mpsc::channel();
     let threads: Vec<_> = stuff
                           .into_iter()
@@ -69,7 +69,6 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
                                            .collect();
 
     // sorting and remapping is necessary for output from threads (because they come in randomly)
-    // try commenting these out and you'll find randomized results in the search (making it error-prone)
     result.sort_by(|&(idx_1, _), &(idx_2, _)| idx_1.cmp(&idx_2));
     let occurrences: Vec<String> = result
                                    .iter()
@@ -97,9 +96,16 @@ fn search(text_vec: &[u8], word: &str) -> String {
     } // we're safe here, because we've already filtered the "failure" case
     let mut text = &*(String::from_utf8_lossy(text_vec));
     let mut indices = Vec::new();
-    while let Some(idx) = text.find(word) {
-        text = &text[(idx + 1)..];
+    let mut idx = 0;
+    let (limit, jump) = (text.len() - 1, word.len());
+    while let Some(i) = text.find(word) {       // FIXME: I don't think this is efficient
+        idx += i;
         indices.push(idx.to_string());
+        idx += jump;
+        match idx >= limit {
+            true => break,
+            false => text = &text[(i + jump)..],
+        }
     }
     match indices.is_empty() {
         true => null,

@@ -2,7 +2,6 @@
 # temp(), hashDate(), protect() - core.py
 
 import ctypes
-from collections import Counter
 from timeit import default_timer as timer
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
@@ -29,7 +28,7 @@ def grabStories(delta, date):       # Grabs the story paths for a given datetime
     return fileData
 
 def pySearch(key, files, word):     # Exhaustive process (that's why I've written a Rust library for this!)
-    occurrences = []                # Rust library accelerates the search by about ~230 times!
+    occurrences = []                # Rust library accelerates this search by about ~230 times!
     displayProg, printed = 0, False
     total = len(files)
     start = timer()
@@ -38,19 +37,29 @@ def pySearch(key, files, word):     # Exhaustive process (that's why I've writte
         if progress is not displayProg:
             displayProg = progress
             printed = False
-        occurred = 0
+        occurred = []
         dataTuple = protect(File, 'd', key)
         if dataTuple:
             data, key = dataTuple
-            counter = Counter(data.split())     # built-in Counter instead of `count` method for a future search option
-            occurred = counter[word]
+            idx, jump = 0, len(word)
+            while idx < len(data):              # probably inefficient
+                idx = data.find(word, idx)
+                if idx == -1:
+                    break
+                occurred.append(idx)
+                idx += jump
         else:
             print warning, 'Cannot decrypt story! Skipping... (filename hash: %s)\n' % File.split(os.sep)[-1]
-        occurrences.append(occurred)
+        if occurred and occurred[0] > 0:
+            occurrences.append((len(occurred), occurred))
+        else:
+            occurrences.append((0, occurred))
+        sum_value = sum(map(lambda elem: elem[0], occurrences))
         if not printed:
-            sys.stdout.write('\r  Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum(occurrences)))
+            sys.stdout.write('\r  Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum_value))
             sys.stdout.flush()
             printed = True
+    print
     stop = timer()
     return occurrences, (stop - start)
 
@@ -75,19 +84,37 @@ def rustySearch(key, pathList, word):           # FFI for giving the searching j
     occurrences = []
     for i in count_string.split(' '):
         idx = map(int, i.split(':'))
-        occurrences.append(idx[0])
+        l = len(idx) if idx[0] > 0 else 0
+        occurrences.append((l, idx))
     stop = timer()
     return occurrences, (stop - start)
 
-def search(key, birthday):          # this invokes the other two searching functions and gathers their output
+def find_nearest(text, idx, limit, dir_value):      # find the closest boundary of text for a given limit
+    i, num = idx, 0
+    while text[i + dir_value] not in ('\n', '\t'):
+        if text[i] == ' ':
+            num += 1
+        if num == limit:
+            return i
+        i += dir_value
+    return i
+
+def search(key, birthday, max_words = 7):       # this invokes the searching functions and gathers their output
     choice = 0
     os.system('cls' if os.name == 'nt' else 'clear')
     word = raw_input("\nEnter a word: ")      # <checklist> support more words in query
-    while choice not in (1, 2, 3):
+    jump = len(word)
+    while True:
         choices = ('\n\t1. Search everything! (Python)',
                     '2. Search between two dates (Python)',
-                    '3. Search everything! (Rust)')
-        choice = int(raw_input('\n\t'.join(choices) + '\n\nChoice: '))
+                    '3. Search everything! (using the Rust library, if any)')
+        try:
+            choice = int(raw_input('\n\t'.join(choices) + '\n\nChoice: '))
+            if choice in (1, 2, 3):
+                break
+            raise ValueError
+        except ValueError:
+            print error, 'Invalid choice!'
     if choice in (1, 3):
         d1 = birthday
         d2 = datetime.now()
@@ -105,32 +132,49 @@ def search(key, birthday):          # this invokes the other two searching funct
             continue
         break
     delta = (d2 - d1).days
+
     print '\nDecrypting %d stories...\n' % delta
     fileData = grabStories(delta, d1)               # has both file location and the formatted datetime
     if choice in (1, 2):
-        wordCount, timing = pySearch(key, fileData[0], word)
+        occurrences, timing = pySearch(key, fileData[0], word)
     else:
-        wordCount, timing = rustySearch(key, fileData[0], word)
-    print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}.".format(d1 = d1, d2 = d2)
-    if sum(wordCount):
-        print "\nStories on these days have the word '%s' in them...\n" % word
-    else:
-        print '\nTime taken:', timing, 'seconds!\n\nBummer! No matching words...'
-        return key
+        occurrences, timing = rustySearch(key, fileData[0], word)
+    wordCount, indices = zip(*occurrences)
     # splitting into tuple pairs for later use (only if there exists a non-zero word count)
-    results = [(fileData[0][i], fileData[1][i], count) for i, count in enumerate(wordCount) if count]
-    for i, data in enumerate(results):
-        numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
-        spaces = 40 - len(numbered)                 # some formatting for the counts
-        print numbered, spaces * ' ', '[ %s ]' % data[2]      # print only the datetime and counts in each file
-    print '\nTime taken:', timing, 'seconds!'
+    results = [(fileData[0][i], fileData[1][i], indices[i]) for i, count in enumerate(wordCount) if count]
+    print 'Done! Time taken:', timing, 'seconds!'
+    if not sum(wordCount):
+        print error, 'Bummer! No matching words...'
+        return key
     print success, 'Found a total of %d occurrences in %d stories!\n' % (sum(wordCount), len(results))
+    print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}:".format(d1 = d1, d2 = d2)
+    print "\nStories on these days have the word '%s' in them...\n" % word
+
+    start = timer()
+    for i, data in enumerate(results):
+        colored = []
+        numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
+        contents, key = protect(results[i][0], 'd', key)
+        text, indices = mark_text(contents, data[2], jump)
+        for idx in indices:         # pretty printing the output (at the cost of decrypting time)
+            begin = find_nearest(text, idx, max_words, -1)
+            end = find_nearest(text, idx, max_words, 1)
+            sliced = '\t' + '... ' + text[begin:end].strip() + ' ...'
+            colored.append(sliced)
+        print numbered, '\n', '%s' % '\n'.join(colored)
+    stop = timer()
+
+    print '\n  %sTime taken for searching: %s%s seconds!%s' % (fmt('B2'), fmt('G'), timing, fmt('0'))
+    print '  %sTime taken for printing: %s%s seconds!%s' % (fmt('B2'), fmt('G'), stop - start, fmt('0'))
+
     while fileData:
         try:
-            ch = int(raw_input("Enter the number to see the corresponding story ('0' to exit): "))
+            ch = int(raw_input("\nEnter the number to see the corresponding story ('0' to exit): "))
             if ch == 0:
                 return key
-            temp((results[ch-1][0], results[ch-1][1]), key)         # filter the fileTuple
+            # I could've used the `protect()`, but I needed the number of display format (you know, DRY)
+            key, (data, start, end) = temp((results[ch - 1][0], results[ch - 1][1]), key, True)
+            print start, mark_text(data, results[ch - 1][2], jump, 'B1')[0], end
         except Exception:
-            print error, 'Oops! Bad input...\n'
+            print error, 'Oops! Bad input...'
     return key

@@ -5,9 +5,9 @@
 v0.5.1 Biographer<sup> [\*] </sup>
 - Added support for QPython in Android
 - Fixed a bug that pops up while using concurrency for searching
-- <s>Added support for multi-word searching (using hashmaps)</s>
+- Search results now show a slice of the output while printing (costs some time while printing the output)
 
-<small> [\*] Well, I think I'll just stick with biographer - it fits quite perfectly!</small>
+<small> [\*] Well, I think I'll just stick with "biographer" - it fits quite perfectly!</small>
 
 v0.5.0: [Biographer](https://github.com/Wafflespeanut/biographer/tree/c53ba745359424c991d089073bd7891f88e547d6)
 - Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~100), even before including *concurrency* (which amplifies the factor up to ~230).

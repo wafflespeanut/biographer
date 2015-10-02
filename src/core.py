@@ -166,14 +166,13 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
         temp(fileTuple, key)
     return key
 
-def temp(fileTuple, key):           # Decrypts and prints the story on the screen
-    if type(fileTuple) == tuple:
+def temp(fileTuple, key, return_text = False):      # Decrypts and prints the story on the screen
+    if type(fileTuple) == tuple:                    # also returns the text on request
         dataTuple = protect(fileTuple[0], 'd', key)
         if dataTuple:
             count = 0
             data, key = dataTuple
             os.system('cls' if os.name == 'nt' else 'clear')
-            print '\nYour story from', fileTuple[1], '...'
             split_data = data.split()
             for word in split_data:
                 if word not in punc:
@@ -182,8 +181,12 @@ def temp(fileTuple, key):           # Decrypts and prints the story on the scree
                         count += 2          # "2" for both date and time
                     except ValueError:
                         pass
-            print "\n<----- START OF STORY -----> (%d words)\n\n" % (len(split_data) - count)
-            print data, "<----- END OF STORY ----->\n"
+            start = "\nYour story from %s ...\n\n<----- START OF STORY -----> (%d words)\n\n"\
+                    % (fileTuple[1], len(split_data) - count)
+            end = "<----- END OF STORY ----->"
+            if return_text:
+                return key, (data, start, end)
+            print start, data, end
             return key
         else:
             return None

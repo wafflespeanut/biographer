@@ -57,7 +57,7 @@ if __name__ == '__main__':
                 sleep(2)
                 continue
             choice = raw_input('\nDo something again (y/n)? ')
-        except Exception as err:
+        except Exception:
             print error, 'Ah, something bad has happened! Maybe reconfigure your diary?'
             sleep(2)
             continue
