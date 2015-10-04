@@ -50,8 +50,8 @@ def random(key, birthday):          # Useful only when you have a lot of stories
     return key
 
 def backupStories(loc):
-    print 'Backing up to Desktop...'
-    zloc = os.path.join(os.path.expanduser('~/Desktop'), "{d:%Y}{d:%m}{d:%d}".format(d = datetime.now()))
+    print '\nBacking up to Desktop...'
+    zloc = os.path.join(os.path.expanduser('~/Desktop'), "{d:%Y}-{d:%m}-{d:%d}".format(d = datetime.now()))
     shutil.make_archive(zloc, 'zip', loc)
 
 def changePass(key):                # Exhaustive method to change the password
