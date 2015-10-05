@@ -6,31 +6,36 @@ from time import sleep
 
 error, warning, success = "\n[ERROR]", "\n[WARNING]", "\n[SUCCESS]"
 
-def writeAccess(path):
-    try:
-        temp = os.path.join(path, 'TEMP.bak')
-        with open(temp, 'w') as file:
-            file.writelines([''])
-        os.remove(temp)
-        return True
-    except IOError:
+def write_access(path, check_path_exists = True):
+    if check_path_exists and not os.path.exists(path):
+        print error, "%s doesn't exist!" % path
         return False
+    if not os.access(path, os.W_OK):
+        print error, "Couldn't get write access to %s" % path
+        return False
+    return True
 
-try:
-    if not writeAccess(os.path.expanduser('~')):
-        print error, "Couldn't get write access to home directory! Checking if the device is a mobile..."
-        if not writeAccess('/mnt/sdcard'):      # QPython uses `/data` as home directory, and so let's try with `/mnt/sdcard`
-            print error, "Oops... Bad luck! Couldn't get write access to sd-card!"
-            exit("\nGoodbye...\n")
-        ploc = '/mnt/sdcard/.diary'
-        print warning, 'If you plan to offer write acces to the home directory, move the config file \
-from sd-card (%s) to your home directory (%s)' % (ploc, os.path.expanduser('~/.diary'))
+if not write_access(os.path.expanduser('~')):
+    print error, "Couldn't get write access to home directory! Checking if the device is a mobile..."
+    check_path = '/mnt/sdcard'  # QPython uses `/data` as home directory, and so let's try with `/mnt/sdcard`
+    try:
+        while not write_access(check_path):
+            check_path = raw_input('\nEnter a path for the config file (which has write-access): ')
+    except KeyboardInterrupt:
+        exit("\nGoodbye...\n")
+    ploc = os.path.join(check_path, '.diary')
+
+    try:
+        print warning, "If you get annoyed by this error and don't wanna do this often," \
+                       + " please offer write acces to the home directory," \
+                       + " move the config file from %s to your home directory (%s)" \
+                       % (ploc, os.path.expanduser('~/.diary'))
         sleep(3)
         raw_input('\nPress [Enter] to continue...')
-except KeyboardInterrupt:
-    pass
+    except KeyboardInterrupt:
+        pass
 
-def askDate(year = 0, month = 0, day = 0):      # Get the date from user
+def ask_date(year = 0, month = 0, day = 0):      # Get the date from user
     while True:
         try:
             if not year:
@@ -45,18 +50,18 @@ def askDate(year = 0, month = 0, day = 0):      # Get the date from user
             year, month, day = 0, 0, 0
             continue
 
-def hashed(hashFunction, text):     # Hashing function (could be MD5 or SHA-256)
-    hashObject = hashFunction()
-    hashObject.update(text)
-    return hashObject.hexdigest()
+def hashed(hash_function, text):     # Hashing function (could be MD5 or SHA-256)
+    hash_object = hash_function()
+    hash_object.update(text)
+    return hash_object.hexdigest()
 
-def hashFormat(datetime):
+def hash_format(datetime):
     return hashed(md5, 'Day {date:%d} ({date:%B} {date:%Y})'.format(date = datetime))
 
-def hashDate(year = 0, month = 0, day = 0):     # Return a path based on (day, month, year) input
-    date = askDate(year, month, day)
-    fileName = loc + hashFormat(date)
-    if not os.path.exists(fileName):
+def hash_date(year = 0, month = 0, day = 0):     # Return a path based on (day, month, year) input
+    date = ask_date(year, month, day)
+    file_name = loc + hash_format(date)
+    if not os.path.exists(file_name):
         if date > datetime.now():
             print error, "You can't just time-travel into the future!"
             return 'blah!'
@@ -64,7 +69,7 @@ def hashDate(year = 0, month = 0, day = 0):     # Return a path based on (day, m
         return None
     story = '{date:%B} {date:%d}, {date:%Y} ({date:%A})'.format(date = date)
     # formatted datetime will be useful for displaying the date of story
-    return fileName, story
+    return file_name, story
 
 def check():        # Allows password to be stored locally
     if not os.path.exists(ploc):
@@ -78,25 +83,25 @@ def check():        # Allows password to be stored locally
                     break
                 else:
                     print error, "Passwords don't match!"
-            hashedKey = hashed(sha256, key)
+            hashed_key = hashed(sha256, key)
             with open(ploc, 'w') as file:
-                file.writelines([hashedKey + '\n'])
+                file.writelines(hashed_key + '\n')
             print success, 'Login credentials have been saved locally!'
         except (KeyboardInterrupt, EOFError):
-            print warning, "Couldn't store login credentials!"
             sleep(wait)
+            print error, "Couldn't store login credentials!"
             return True
     else:
         try:
             with open(ploc, 'r') as file:
-                hashedKey = file.readlines()[0][:-1]
+                hashed_key = file.readlines()[0][:-1]
             key = getpass('\nEnter your password to continue: ')
-            if not hashedKey == hashed(sha256, key):
+            if not hashed_key == hashed(sha256, key):
                 print error, 'Wrong password!'      # Fails if the password doesn't match with the credentials
                 return None
-        except KeyboardInterrupt:
-            print '\n', error, 'Failed to authenticate!'
+        except (KeyboardInterrupt, EOFError):
             sleep(wait)
+            print '\n', error, 'Failed to authenticate!'
             return True
     return key
 
@@ -122,27 +127,27 @@ def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuf
 
 newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX has only '\r' for newlines
 
-def write(key, fileTuple = None):   # Does all those dirty writing job
+def write(key, file_tuple = None):   # Does all those dirty writing job
+    clear_screen()
     keyComb = 'Ctrl+C'
     now = datetime.now()
-    os.system('cls' if os.name == 'nt' else 'clear')
     if sys.platform == 'win32':
         print warning, "If you're using the command prompt, don't press %s while writing!" % keyComb
         keyComb = 'Ctrl+Z and [Enter]'
-    if not fileTuple:
-        dateHash = hashFormat(now)
+    if not file_tuple:
+        date_hash = hash_format(now)
         story = '{date:%B} {date:%d}, {date:%Y} ({date:%A}) ...'.format(date = now)
-        fileTuple = (loc + dateHash, story)
-    elif type(fileTuple) == str:
+        file_tuple = (loc + date_hash, story)
+    elif type(file_tuple) == str:
         return key
-    File = fileTuple[0]
+    File = file_tuple[0]
     if os.path.exists(File) and os.path.getsize(File):  # "Intentionally" decrypting the original file
         key = protect(File, 'w', key)   # an easy workaround to modify your original story
         if not key:
             return None
         else:
             print '\nStory already exists! Appending to the current story...'
-            print '(filename hash: %s)' % fileTuple[0].split(os.sep)[-1]        # useful for finding the file
+            print '(filename hash: %s)' % file_tuple[0].split(os.sep)[-1]        # useful for finding the file
     timestamp = str(now).split('.')[0].split(' ')
     data = ['[' + timestamp[0] + '] ' + timestamp[1] + '\n']
     try:
@@ -150,8 +155,8 @@ def write(key, fileTuple = None):   # Does all those dirty writing job
 to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you're done!)\n\n\t".format(keyComb))
         data.append(stuff)
     except (KeyboardInterrupt, EOFError):
-        print '\nNothing written! Quitting...'
         sleep(wait)
+        print '\nNothing written! Quitting...'
         if os.path.exists(File) and os.path.getsize(File):
             key = protect(File, 'e', key)
         return key
@@ -167,16 +172,16 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
     key = protect(File, 'e', key)
     ch = raw_input(success + ' Successfully written to file! Do you wanna see it (y/n)? ')
     if ch == 'y':
-        temp(fileTuple, key)
+        view(file_tuple, key)
     return key
 
-def temp(fileTuple, key, return_text = False):      # Decrypts and prints the story on the screen
-    if type(fileTuple) == tuple:                    # also returns the text on request
-        dataTuple = protect(fileTuple[0], 'd', key)
-        if dataTuple:
+def view(file_tuple, key, return_text = False):      # Decrypts and prints the story on the screen
+    if type(file_tuple) == tuple:                    # also returns the text on request
+        data_tuple = protect(file_tuple[0], 'd', key)
+        if data_tuple:
             count = 0
-            data, key = dataTuple
-            os.system('cls' if os.name == 'nt' else 'clear')
+            clear_screen()
+            data, key = data_tuple
             split_data = data.split()
             for word in split_data:
                 if word not in punc:
@@ -186,7 +191,7 @@ def temp(fileTuple, key, return_text = False):      # Decrypts and prints the st
                     except ValueError:
                         pass
             start = "\nYour story from %s ...\n\n<----- START OF STORY -----> (%d words)\n\n"\
-                    % (fileTuple[1], len(split_data) - count)
+                    % (file_tuple[1], len(split_data) - count)
             end = "<----- END OF STORY ----->"
             if return_text:
                 return key, (data, start, end)
@@ -194,7 +199,7 @@ def temp(fileTuple, key, return_text = False):      # Decrypts and prints the st
             return key
         else:
             return None
-    elif type(fileTuple) == str:
+    elif type(file_tuple) == str:
         return key
     else:
         return None
@@ -207,15 +212,15 @@ def configure(delete = False):      # Configuration file for authentication
             with open(ploc, 'r') as file:
                 config = file.readlines()
             try:
-                loc = config[1].strip() + os.sep
+                loc = config[1].rstrip(os.sep + '\n') + os.sep
                 assert os.path.exists(loc)
                 birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
                 key = check()
-                if type(key) is not str:
-                    return loc, key, birthday, choice
-                choice = 'y'
+                if type(key) is str:
+                    choice = 'y'
+                return loc, key, birthday, choice
             except Exception:
-                os.system('cls' if os.name == 'nt' else 'clear')
+                clear_screen()
                 print '\nInvalid configuration!'
                 delete = True       # consider this as an invalid configuration
 
@@ -228,18 +233,19 @@ def configure(delete = False):      # Configuration file for authentication
             sleep(2)        # waiting for the user to see the message (before it gets cleared)
 
         if not os.path.exists(ploc):
-            os.system('cls' if os.name == 'nt' else 'clear')
+            clear_screen()
             print "\nLet's start configuring your diary...\n"
-            loc = raw_input('Enter the (absolute) location for your diary: ')
-            while not (os.path.exists(loc) and writeAccess(loc)):
-                print error, "Couldn't get write access to the path!"
-                loc = raw_input('\nPlease enter a valid path: ')
-            if not loc.strip(os.sep).endswith('Diary'):     # just put everything in a folder for Diary
+            print 'Enter the (absolute) location for your diary...', \
+                  "\n(Note that this will create a foler named 'Diary' if the path doesn't end with it)"
+            loc = raw_input('\nPath: ')
+            while not write_access(loc):
+                loc = raw_input('\nPlease enter a valid path (with write access): ')
+            if not loc.rstrip(os.sep).endswith('Diary'):     # just put everything in a folder for Diary
                 loc = os.path.join(loc, 'Diary')
                 print 'Note that this will make use of %r' % loc
                 if not os.path.exists(loc):
                     os.mkdir(loc)
-            loc += os.sep
+            loc = loc.rstrip(os.sep) + os.sep
 
             while True:
                 try:
@@ -251,8 +257,8 @@ def configure(delete = False):      # Configuration file for authentication
                         birthday = datetime.now()
                     else:
                         birthday = datetime.strptime(birth, '%Y-%m-%d')
-                        dateHash = hashFormat(birthday)
-                        if not os.path.exists(loc + dateHash):
+                        date_hash = hash_format(birthday)
+                        if not os.path.exists(loc + date_hash):
                             print warning, "Story doesn't exist on that day! (in the given path)"
                 except ValueError:
                     print error, 'Oops! Error in input. Try again...'
@@ -264,7 +270,7 @@ def configure(delete = False):      # Configuration file for authentication
             if type(key) is not str:
                 return loc, key, birthday, choice
             with open(ploc, 'a') as file:
-                file.writelines([loc + '\n' + birth])   # Store the location & birth of diary along with the password hash
+                file.writelines(loc + '\n' + birth)     # Store the location & birth of diary along with the password hash
 
             choice = 'y'
             print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % ploc

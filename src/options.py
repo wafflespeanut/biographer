@@ -1,7 +1,3 @@
-# [Functions in other modules]
-# findStory() - search.py
-# temp(), protect(), hashed() - core.py
-
 import shutil
 from random import choice as rchoice
 
@@ -39,59 +35,107 @@ def mark_text(text, indices, length, color = 'R'):  # Mark text and return corre
         i += 1
     return ''.join(text), new_indices
 
-def random(key, birthday):          # Useful only when you have a lot of stories (obviously)
-    stories = len(os.listdir(loc))
+def random(loc, key, birthday):         # Useful only when you have a lot of stories (obviously)
+    num_stories = len(os.listdir(loc))
+    if not num_stories:
+        print error, "There's no story in the given location!"
+        return key
     for i in range(10):
-        ch = rchoice(range(stories))
-        fileName = findStory(ch, birthday)
+        ch = rchoice(range(num_stories))
+        fileName = find_story(loc, ch, birthday)
         if fileName:
-            return temp(fileName, key)
+            return view(fileName, key)
     print '\nPerhaps, this may not be a valid path after all...'
     return key
 
-def backupStories(loc):
-    print '\nBacking up to Desktop...'
-    zloc = os.path.join(os.path.expanduser('~/Desktop'), "{d:%Y}-{d:%m}-{d:%d}".format(d = datetime.now()))
+def backup(loc, key, bloc = None):
+    if not bloc:
+        print '\nBacking up to Desktop...'
+        bloc = '~/Desktop'
+    zloc = os.path.join(os.path.expanduser(bloc), "{d:%Y}-{d:%m}-{d:%d}".format(d = datetime.now()))
     shutil.make_archive(zloc, 'zip', loc)
+    return key      # doesn't really need the key - it's much like a pipeline for the key to pass through it
 
-def changePass(key):                # Exhaustive method to change the password
-    os.system('cls' if os.name == 'nt' else 'clear')
+def change_pass(loc, key, birthday):      # Exhaustive method to change the password
+    clear_screen()
+    birth = '{date:%Y}-{date:%m}-{date:%d}'.format(date = birthday)
+
     print "\nLet's change your password..."
     if not getpass('\nOld password: ') == key:
         print error, 'Wrong password!'
-        return loc, key
-    newKey = getpass('New password: ')
-    if newKey == key:
+        return key
+    new_key = getpass('New password: ')
+    if new_key == key:
         print error, 'Both passwords are the same!'
-        return loc, key
-    if not getpass('Re-enter new password: ') == newKey:
-        print error, "Passwords don't match!"
-        return loc, key
-    print '\nWorking...'
-    temp_loc = loc + 'TEMP'
-    shutil.copytree(loc, temp_loc)          # always have some precautions!
-    backupStories(loc)
-    print '(... just in case)'
-    print 'Decrypting using old key...'
-    for File in os.listdir(temp_loc):
-        key = protect(os.path.join(temp_loc, File), 'w', key)
-        if key == None:
-            os.rmdir(temp_loc)
-            print error, "This file couldn't be decrypted! (filename hash: %s)\nResolve it before changing the password..." % File
-            return loc, key
-    print 'Encrypting using the new key...'
-    for File in os.listdir(temp_loc):
-        key = protect(os.path.join(temp_loc, File), 'e', newKey)
-    print "Overwriting the existing stories... (Please don't interrupt now!)"
-    for File in os.listdir(loc):
-        try:
-            os.remove(loc + File)
-            os.rename(os.path.join(temp_loc, File), loc + File)
-        except OSError:
-            continue                # This should leave our temporary folder
-    os.rmdir(temp_loc)
+        return key
+    while not getpass('Re-enter new password: ') == new_key:
+        print error, "Passwords don't match!\n"
+        new_key = getpass('New password: ')
+
+    try:
+        clear_screen()
+        print warning, "Working... (Your stories are vulnerable now, so don't go away!)"
+        loc_stripped = loc.rstrip(os.sep)
+        temp_loc = os.path.join(os.path.dirname(loc_stripped), 'TEMP')
+        while True:
+            temp_stripped = temp_loc.rstrip(os.sep)
+            if os.path.dirname(temp_stripped) == loc_stripped:
+                print "Ensure that the working directory is not within your diary's directory!"
+            elif write_access(os.path.dirname(temp_stripped), False):
+                break
+            temp_loc = raw_input('Enter a path to choose as working directory: ') + os.sep + 'TEMP'
+        shutil.copytree(loc, temp_loc)          # always have some precautions!
+        display_prog, printed = 0, False
+        files = os.listdir(temp_loc)
+        total = len(files)
+
+        print '\nDecrypting using old key...\n'
+        for i, File in enumerate(files):
+            progress = int((float(i + 1) / total) * 100)
+            if progress is not display_prog:
+                display_prog = progress
+                printed = False
+            key = protect(os.path.join(temp_loc, File), 'w', key)
+            if key == None:
+                shutil.rmtree(temp_loc)
+                print error, "This file couldn't be decrypted! (filename hash: %s)\
+                             \nResolve it before changing the password again..." % File
+                return key
+            if not printed:
+                sys.stdout.write('\r  Progress: %d%s' % (display_prog, '%'))
+                sys.stdout.flush()
+                printed = True
+
+        print
+        display_prog, printed = 0, False
+        print '\nEncrypting using the new key...\n'
+        for i, File in enumerate(files):
+            progress = int((float(i + 1) / total) * 100)
+            if progress is not display_prog:
+                display_prog = progress
+                printed = False
+            new_key = protect(os.path.join(temp_loc, File), 'e', new_key)
+            if not printed:
+                sys.stdout.write('\r  Progress: %d%s' % (display_prog, '%'))
+                sys.stdout.flush()
+                printed = True
+    except (KeyboardInterrupt, EOFError):
+        sleep(wait)
+        if os.path.exists(temp_loc):
+            shutil.rmtree(temp_loc)
+        print error, 'Interrupted! Failed to change the password!'
+        return key
+
+    print
+    if write_access(loc):
+        shutil.rmtree(loc)
+    else:
+        print error, 'Directory is read-only! Failed to change the password!'
+        return key
+    print "\nOverwriting the existing stories... (Please don't interrupt now!)"
+    os.rename(temp_loc, loc)
     print 'Modifying the configuration file...'
     with open(ploc, 'w') as file:
-        file.writelines([hashed(sha256, key), '\n', loc])
+        file.writelines('\n'.join([hashed(sha256, new_key), loc, birth]))
     print success, 'Password has been changed!'
-    return loc, key
+    return new_key

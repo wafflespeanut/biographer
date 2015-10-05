@@ -1,6 +1,3 @@
-# [Functions in other modules]
-# temp(), hashDate(), protect() - core.py
-
 import ctypes
 from timeit import default_timer as timer
 
@@ -9,38 +6,40 @@ ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
 rustLib = os.path.join(path, 'target', 'release', prefix + 'biographer' + ext)    # Library location (relative)
 # And, you'll be needing Nightly rust (v1.5.0), because the library depends on a future method and a deprecated method
 
-def findStory(delta, birthday):     # Finds the file name using the timedelta from the birth of the diary to a specified date
+# Finds the file name using the timedelta from the birth of the diary to a specified date
+def find_story(loc, delta, birthday):
     stories = len(os.listdir(loc))
     d = birthday + timedelta(days = delta)
-    fileTuple = hashDate(d.year, d.month, d.day)
-    if not fileTuple:
+    file_tuple = hash_date(d.year, d.month, d.day)
+    if not file_tuple:
         return None
-    return fileTuple
+    return file_tuple
 
-def grabStories(delta, date):       # Grabs the story paths for a given datetime and timedelta objects
-    fileData = [], []
+# Grabs the absolute paths of stories for a given datetime and timedelta objects
+def grab_stories(loc, delta, date):
+    file_data = [], []
     for i in range(delta):
-        fileTuple = findStory(i, date)
-        if fileTuple == None:
+        file_tuple = find_story(loc, i, date)
+        if file_tuple == None:
             continue
-        fileData[0].append(fileTuple[0])
-        fileData[1].append(fileTuple[1])
-    return fileData
+        file_data[0].append(file_tuple[0])
+        file_data[1].append(file_tuple[1])
+    return file_data
 
-def pySearch(key, files, word):     # Exhaustive process (that's why I've written a Rust library for this!)
-    occurrences = []                # Rust library accelerates this search by about ~230 times!
-    displayProg, printed = 0, False
+def py_search(key, files, word):     # Exhaustive process (that's why I've written a Rust library for this!)
+    occurrences = []                # The library accelerates this search by about ~230 times!
+    display_prog, printed = 0, False
     total = len(files)
     start = timer()
     for i, File in enumerate(files):
         progress = int((float(i + 1) / total) * 100)
-        if progress is not displayProg:
-            displayProg = progress
+        if progress is not display_prog:
+            display_prog = progress
             printed = False
         occurred = []
-        dataTuple = protect(File, 'd', key)
-        if dataTuple:
-            data, key = dataTuple
+        data_tuple = protect(File, 'd', key)
+        if data_tuple:
+            data, key = data_tuple
             idx, jump = 0, len(word)
             while idx < len(data):              # probably inefficient
                 idx = data.find(word, idx)
@@ -56,14 +55,14 @@ def pySearch(key, files, word):     # Exhaustive process (that's why I've writte
             occurrences.append((0, occurred))
         sum_value = sum(map(lambda elem: elem[0], occurrences))
         if not printed:
-            sys.stdout.write('\r  Progress: %d%s \t(Found: %d)' % (displayProg, '%', sum_value))
+            sys.stdout.write('\r  Progress: %d%s \t(Found: %d)' % (display_prog, '%', sum_value))
             sys.stdout.flush()
             printed = True
     print
     stop = timer()
     return occurrences, (stop - start)
 
-def rustySearch(key, pathList, word):           # FFI for giving the searching job to Rust
+def rusty_search(key, pathList, word):           # FFI for giving the searching job to Rust
     if not os.path.exists(rustLib):
         print error, 'Rust library not found!'
         return [0] * len(pathList), 0
@@ -99,20 +98,19 @@ def find_nearest(text, idx, limit, dir_value):      # find the closest boundary 
         i += dir_value
     return i
 
-def search(key, birthday, max_words = 7):       # this invokes the searching functions and gathers their output
+def search(loc, key, birthday, grep = 7):        # Invokes both the searching functions
     choice = 0
-    os.system('cls' if os.name == 'nt' else 'clear')
-    word = raw_input("\nEnter a word: ")      # <checklist> support more words in query
+    clear_screen()
+    word = raw_input("\nEnter a word: ")
     jump = len(word)
-    while True:
+    while choice not in (1, 2, 3):
         choices = ('\n\t1. Search everything! (Python)',
                     '2. Search between two dates (Python)',
                     '3. Search everything! (using the Rust library, if any)')
         try:
             choice = int(raw_input('\n\t'.join(choices) + '\n\nChoice: '))
-            if choice in (1, 2, 3):
-                break
-            raise ValueError
+            if choice not in (1, 2, 3):
+                raise ValueError
         except ValueError:
             print error, 'Invalid choice!'
     if choice in (1, 3):
@@ -132,48 +130,71 @@ def search(key, birthday, max_words = 7):       # this invokes the searching fun
             continue
         break
     delta = (d2 - d1).days
+    print '\nDecrypting %d stories...' % delta
 
-    print '\nDecrypting %d stories...\n' % delta
-    fileData = grabStories(delta, d1)               # has both file location and the formatted datetime
-    if choice in (1, 2):
-        occurrences, timing = pySearch(key, fileData[0], word)
-    else:
-        occurrences, timing = rustySearch(key, fileData[0], word)
-    wordCount, indices = zip(*occurrences)
+    try:
+        file_data = grab_stories(loc, delta, d1)       # has both file location and the formatted datetime
+        if choice in (1, 2):
+            occurrences, timing = py_search(key, file_data[0], word)
+        else:
+            occurrences, timing = rusty_search(key, file_data[0], word)
+        word_count, indices = zip(*occurrences)
+    except ValueError:
+        print error, 'There are no stories in the given location!'
+        return key
     # splitting into tuple pairs for later use (only if there exists a non-zero word count)
-    results = [(fileData[0][i], fileData[1][i], indices[i]) for i, count in enumerate(wordCount) if count]
-    print 'Done! Time taken:', timing, 'seconds!'
-    if not sum(wordCount):
+    results = [(file_data[0][i], file_data[1][i], indices[i]) for i, count in enumerate(word_count) if count]
+    total_count, num_stories = sum(word_count), len(results)
+    print success, 'Done! Time taken: %s seconds! (%d occurrences in %d stories!)' \
+                   % (timing, total_count, num_stories)
+    if not total_count:
         print error, 'Bummer! No matching words...'
         return key
-    print success, 'Found a total of %d occurrences in %d stories!\n' % (sum(wordCount), len(results))
-    print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}:".format(d1 = d1, d2 = d2)
-    print "\nStories on these days have the word '%s' in them...\n" % word
 
-    start = timer()
-    for i, data in enumerate(results):
-        colored = []
-        numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
-        contents, key = protect(results[i][0], 'd', key)
-        text, indices = mark_text(contents, data[2], jump)
-        for idx in indices:         # pretty printing the output (at the cost of decrypting time)
-            begin = find_nearest(text, idx, max_words, -1)
-            end = find_nearest(text, idx, max_words, 1)
-            sliced = '\t' + '... ' + text[begin:end].strip() + ' ...'
-            colored.append(sliced)
-        print numbered, '\n', '%s' % '\n'.join(colored)
-    stop = timer()
+    if grep:                # pretty printing the output (at the cost of decrypting time)
+        try:
+            print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}:".format(d1 = d1, d2 = d2)
+            print "\nStories on these days have the word '%s' in them...\n" % word
+            start = timer()
+            for i, data in enumerate(results):
+                colored = []
+                numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
+                contents, key = protect(results[i][0], 'd', key)
+                text, indices = mark_text(contents, data[2], jump)
+                for idx in indices:
+                    begin = find_nearest(text, idx, grep, -1)
+                    end = find_nearest(text, idx, grep, 1)
+                    sliced = '\t' + '... ' + text[begin:end].strip() + ' ...'
+                    colored.append(sliced)
+                print numbered, '\n', '%s' % '\n'.join(colored)
+            stop = timer()
+        except (KeyboardInterrupt, EOFError):
+            sleep(wait)
+            grep = 0
+            clear_screen()
+            print "Yep, it takes time! Let's go back to the good ol' days..."
 
-    print '\n  %sTime taken for searching: %s%s seconds!%s' % (fmt('B2'), fmt('G'), timing, fmt('0'))
-    print '  %sTime taken for printing: %s%s seconds!%s' % (fmt('B2'), fmt('G'), stop - start, fmt('0'))
+    if not grep:
+        print "\nSearch results from {d1:%B} {d1:%d}, {d1:%Y} to {d2:%B} {d2:%d}, {d2:%Y}:".format(d1 = d1, d2 = d2)
+        print "\nStories on these days have the word '%s' in them...\n" % word
+        for i, data in enumerate(results):
+            numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
+            spaces = 40 - len(numbered)                 # some formatting for the counts
+            print numbered, spaces * ' ', '[ %s ]' % len(data[2])      # print only the datetime and counts in each file
 
-    while fileData:
+    print '\n%s %sFound a total of %d occurrences in %d stories!%s\n' \
+           % (success, fmt('Y'), total_count, num_stories, fmt('0'))
+    print '  %sTime taken for searching: %s%s seconds!%s' % (fmt('B2'), fmt('G'), timing, fmt('0'))
+    if grep:
+        print '  %sTime taken for pretty printing: %s%s seconds!%s' % (fmt('B2'), fmt('G'), stop - start, fmt('0'))
+
+    while file_data:
         try:
             ch = int(raw_input("\nEnter the number to see the corresponding story ('0' to exit): "))
             if ch == 0:
                 return key
             # I could've used the `protect()`, but I needed the number of display format (you know, DRY)
-            key, (data, start, end) = temp((results[ch - 1][0], results[ch - 1][1]), key, True)
+            key, (data, start, end) = view((results[ch - 1][0], results[ch - 1][1]), key, True)
             print start, mark_text(data, results[ch - 1][2], jump, 'B1')[0], end
         except Exception:
             print error, 'Oops! Bad input...'
