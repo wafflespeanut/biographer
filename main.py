@@ -24,9 +24,7 @@ def chain_args(args):
         option, value = args[0].split('=')
     except ValueError:
         option = args[0]
-
-    print args
-
+    # CHECKLIST
     return None
 
 if __name__ == '__main__':  # there are a hell lot of `try...except`s for smoother experience
@@ -60,16 +58,18 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                         " 6. Backup your stories",
                         " 7. Change your password",
                         " 8. Reconfigure your diary",
+                        # " 9. Encrypt a story",    # in case the script quits before encrypting a story
                         " 0. Exit the biographer",)
             print '\n\t\t'.join(choices)
             options =  ("key = write(key)",     # just to remember the password throughout the session
                         "key = random(loc, key, birthday)",
-                        "key = view(hash_date(), key)",
-                        "key = write(key, hash_date())",
+                        "key = view(key, hash_date())",
+                        "key = write(key, hash_date(force = True))",
                         "key = search(loc, key, birthday)",
                         "key = backup(loc, key)",
                         "key = change_pass(loc, key, birthday)",
-                        "loc, key, birthday, choice = configure(True)",)
+                        "loc, key, birthday, choice = configure(True)",     # hidden choice
+                        "key = try_encrypt(key, hash_date())")
             try:
                 ch = int(raw_input('\nChoice: '))
                 if ch == 0:
@@ -84,7 +84,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 sleep(wait)
         except Exception:       # An uncaught exception (which has probably creeped all the way up here)
             try:
-                print error, 'Ah, something bad has happened! Maybe this is a bug, or try reconfigure your diary?'
+                print error, 'Ah, something bad has happened! Maybe this is a bug, or try reconfiguring your diary?'
                 sleep(2)
             except (KeyboardInterrupt, EOFError):       # just to not quit while displaying
                 sleep(wait)

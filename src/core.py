@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from getpass import getpass
 from hashlib import md5, sha256
 from string import punctuation as punc
@@ -38,15 +38,13 @@ if not write_access(os.path.expanduser('~')):
 def ask_date(year = 0, month = 0, day = 0):      # Get the date from user
     while True:
         try:
-            if not year:
-                year = raw_input('\nYear: ')
-            if not month:
-                month = raw_input('\nMonth: ')
-            if not day:
-                day = raw_input('\nDay: ')
-            return datetime(int(year), int(month), int(day))
-        except Exception as err:
-            print error, err
+            if not all([year, month, day]):
+                year = int(raw_input('\nYear: '))
+                month = int(raw_input('\nMonth: '))
+                day = int(raw_input('\nDay: '))
+            return datetime(year, month, day)
+        except Exception:
+            print error, 'Invalid input! Cannot parse the given date!'
             year, month, day = 0, 0, 0
             continue
 
@@ -58,17 +56,19 @@ def hashed(hash_function, text):     # Hashing function (could be MD5 or SHA-256
 def hash_format(datetime):
     return hashed(md5, 'Day {date:%d} ({date:%B} {date:%Y})'.format(date = datetime))
 
-def hash_date(year = 0, month = 0, day = 0):     # Return a path based on (day, month, year) input
+def hash_date(year = 0, month = 0, day = 0, force = False):     # Return a path based on (day, month, year) input
     date = ask_date(year, month, day)
     file_name = loc + hash_format(date)
+    # formatted datetime will be useful for displaying the date of story
+    story = '{date:%B} {date:%d}, {date:%Y} ({date:%A})'.format(date = date)
     if not os.path.exists(file_name):
         if date > datetime.now():
             print error, "You can't just time-travel into the future!"
             return 'blah!'
+        if date < datetime.now() and force:
+            return file_name, story
         print error, 'No stories on {date:%B} {date:%d}, {date:%Y} ({date:%A}).'.format(date = date)
         return None
-    story = '{date:%B} {date:%d}, {date:%Y} ({date:%A})'.format(date = date)
-    # formatted datetime will be useful for displaying the date of story
     return file_name, story
 
 def check():        # Allows password to be stored locally
@@ -95,14 +95,15 @@ def check():        # Allows password to be stored locally
         try:
             with open(ploc, 'r') as file:
                 hashed_key = file.readlines()[0][:-1]
-            key = getpass('\nEnter your password to continue: ')
-            if not hashed_key == hashed(sha256, key):
-                print error, 'Wrong password!'      # Fails if the password doesn't match with the credentials
-                return None
+            while True:     # Fails if the password doesn't match with the credentials
+                key = getpass('\nEnter your password to continue: ')
+                if hashed_key == hashed(sha256, key):
+                    break
+                print error, 'Wrong password!'
         except (KeyboardInterrupt, EOFError):
             sleep(wait)
             print '\n', error, 'Failed to authenticate!'
-            return True
+            return None
     return key
 
 def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuff
@@ -124,6 +125,23 @@ def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuf
         return key
     else:
         return data, key
+
+def try_encrypt(key, file_tuple, encrypt = True):   # just to check whether a file has already been encrypted
+    if not file_tuple:
+        return key
+    file_path = file_tuple[0]
+    try:
+        key = protect(file_path, 'd', key)
+        if encrypt:
+            print error, "This file looks like it's already been encrypted.", \
+                         "\nIt's never encouraged to use this algorithm for encryption more than once!"
+            return key
+    except TypeError:
+        if encrypt:
+            protect(file_path, 'e', key)
+            print success, 'Successfully encrypted the file! (%s)' % file_path
+            return key
+    return None
 
 newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX has only '\r' for newlines
 
@@ -172,10 +190,10 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
     key = protect(File, 'e', key)
     ch = raw_input(success + ' Successfully written to file! Do you wanna see it (y/n)? ')
     if ch == 'y':
-        view(file_tuple, key)
+        view(key, file_tuple)
     return key
 
-def view(file_tuple, key, return_text = False):      # Decrypts and prints the story on the screen
+def view(key, file_tuple, return_text = False):      # Decrypts and prints the story on the screen
     if type(file_tuple) == tuple:                    # also returns the text on request
         data_tuple = protect(file_tuple[0], 'd', key)
         if data_tuple:

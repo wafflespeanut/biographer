@@ -42,9 +42,9 @@ def random(loc, key, birthday):         # Useful only when you have a lot of sto
         return key
     for i in range(10):
         ch = rchoice(range(num_stories))
-        fileName = find_story(loc, ch, birthday)
-        if fileName:
-            return view(fileName, key)
+        file_tuple = find_story(loc, ch, birthday)
+        if file_tuple:
+            return view(key, file_tuple)
     print '\nPerhaps, this may not be a valid path after all...'
     return key
 

@@ -1,4 +1,5 @@
 import ctypes
+from datetime import timedelta
 from timeit import default_timer as timer
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
@@ -48,7 +49,7 @@ def py_search(key, files, word):     # Exhaustive process (that's why I've writt
                 occurred.append(idx)
                 idx += jump
         else:
-            print warning, 'Cannot decrypt story! Skipping... (filename hash: %s)\n' % File.split(os.sep)[-1]
+            print warning, 'Cannot decrypt story! Skipping... (file: %s)\n' % File
         if occurred and occurred[0] > 0:
             occurrences.append((len(occurred), occurred))
         else:
@@ -194,8 +195,9 @@ def search(loc, key, birthday, grep = 7):        # Invokes both the searching fu
             if ch == 0:
                 return key
             # I could've used the `protect()`, but I needed the number of display format (you know, DRY)
-            key, (data, start, end) = view((results[ch - 1][0], results[ch - 1][1]), key, True)
-            print start, mark_text(data, results[ch - 1][2], jump, 'B1')[0], end
+            file_tuple, indices = (results[ch - 1][0], results[ch - 1][1]), results[ch - 1][2]
+            key, (data, start, end) = view(key, file_tuple, True)
+            print start, mark_text(data, indices, jump, 'B1')[0], end
         except Exception:
             print error, 'Oops! Bad input...'
     return key

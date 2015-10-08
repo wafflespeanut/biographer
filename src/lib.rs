@@ -2,6 +2,8 @@
 #![allow(deprecated, unused_imports)]
 
 extern crate libc;
+extern crate rand as random;
+extern crate rustc_serialize as serialize;
 
 mod cipher;
 
@@ -90,10 +92,7 @@ fn fopen(path: &str) -> (usize, Vec<u8>) {
 
 // Checks if the big vector contains the small vector slice and returns a string of indices
 fn search(text_vec: &[u8], word: &str) -> String {
-    let null = "0".to_owned();
-    if text_vec.is_empty() {        // Wrong password!
-        return null;
-    } // we're safe here, because we've already filtered the "failure" case
+    // we're safe here, because we've already filtered the "failure" case
     let mut text = &*(String::from_utf8_lossy(text_vec));
     let mut indices = Vec::new();
     let mut idx = 0;
@@ -108,7 +107,7 @@ fn search(text_vec: &[u8], word: &str) -> String {
         }
     }
     match indices.is_empty() {
-        true => null,
+        true => "0".to_owned(),
         false => indices.join(":"),
     }
 }
@@ -117,5 +116,8 @@ fn search(text_vec: &[u8], word: &str) -> String {
 fn count_words(file_name: &str, key: &str, word: &str) -> String {
     let contents = fopen(&file_name).1;
     let decrypted = zombify(0, &contents, key);
-    search(&decrypted, word)
+    if decrypted.is_empty() {
+        println!("\nCannot decrypt story! Skipping... (file: {})", file_name);
+        return "0".to_owned();
+    } search(&decrypted, word)
 }
