@@ -184,10 +184,10 @@ def search(loc, key, birthday, grep = 7):        # Invokes both the searching fu
             print numbered, spaces * ' ', '[ %s ]' % len(data[2])      # print only the datetime and counts in each file
 
     print '\n%s %sFound a total of %d occurrences in %d stories!%s\n' \
-           % (success, fmt('Y'), total_count, num_stories, fmt('0'))
-    print '  %sTime taken for searching: %s%s seconds!%s' % (fmt('B2'), fmt('G'), timing, fmt('0'))
+           % (success, fmt('Y'), total_count, num_stories, fmt())
+    print '  %sTime taken for searching: %s%s seconds!%s' % (fmt('B2'), fmt('G'), timing, fmt())
     if grep:
-        print '  %sTime taken for pretty printing: %s%s seconds!%s' % (fmt('B2'), fmt('G'), stop - start, fmt('0'))
+        print '  %sTime taken for pretty printing: %s%s seconds!%s' % (fmt('B2'), fmt('G'), stop - start, fmt())
 
     while file_data:
         try:

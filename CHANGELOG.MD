@@ -1,8 +1,9 @@
-### Checklist for 0.6.0:
+### Checklist for next versions:
 
 - [x] Fix the flaws in the configuring, password changing and searching functions
-- [x] Improve the "grep" function and add a choice to ignore it
-- [ ] Improve the code structure for flexibility of various functions
+- [x] Improve the "grep" option and add a choice to ignore it
+- [ ] Timestamp at the start of the story compromises the cipher
+- [ ] Improve the code structure using objects
 - [ ] Setup command-line options for writing, viewing and searching
 
 ### Changelog

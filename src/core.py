@@ -5,35 +5,118 @@ from string import punctuation as punc
 from time import sleep
 
 error, warning, success = "\n[ERROR]", "\n[WARNING]", "\n[SUCCESS]"
+newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX has only '\r' for newlines
 
-def write_access(path, check_path_exists = True):
-    if check_path_exists and not os.path.exists(path):
-        print error, "%s doesn't exist!" % path
-        return False
-    if not os.access(path, os.W_OK):
-        print error, "Couldn't get write access to %s" % path
-        return False
-    return True
-
-if not write_access(os.path.expanduser('~')):
-    print error, "Couldn't get write access to home directory! Checking if the device is a mobile..."
-    check_path = '/mnt/sdcard'  # QPython uses `/data` as home directory, and so let's try with `/mnt/sdcard`
+def configure(delete = False):
     try:
-        while not write_access(check_path):
-            check_path = raw_input('\nEnter a path for the config file (which has write-access): ')
-    except KeyboardInterrupt:
-        exit("\nGoodbye...\n")
-    ploc = os.path.join(check_path, '.diary')
+        if os.path.exists(ploc) and not delete:
+            print '\nConfiguration file found!'
+            with open(ploc, 'r') as file:
+                config = file.readlines()
+            try:
+                loc = config[1].rstrip(os.sep + '\n') + os.sep
+                assert os.path.exists(loc)
+                birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
+                key = check()
+                if type(key) is str:
+                    choice = 'y'
+                return loc, key, birthday, choice
+            except Exception:
+                clear_screen()
+                print '\nInvalid configuration!'
+                delete = True       # consider this as an invalid configuration
 
-    try:
-        print warning, "If you get annoyed by this error and don't wanna do this often," \
-                       + " please offer write acces to the home directory," \
-                       + " move the config file from %s to your home directory (%s)" \
-                       % (ploc, os.path.expanduser('~/.diary'))
-        sleep(3)
-        raw_input('\nPress [Enter] to continue...')
-    except KeyboardInterrupt:
-        pass
+        if delete:
+            if os.path.exists(ploc):
+                print warning, 'Deleting configuration file...'
+                os.remove(ploc)
+            else:
+                print error, 'Configuration file has already been removed!'
+            sleep(2)        # waiting for the user to see the message (before it gets cleared)
+
+        if not os.path.exists(ploc):
+            clear_screen()
+            print "\nLet's start configuring your diary...\n"
+            print 'Enter the (absolute) location for your diary...', \
+                  "\n(Note that this will create a foler named 'Diary' if the path doesn't end with it)"
+            loc = raw_input('\nPath: ')
+            while not write_access(loc):
+                loc = raw_input('\nPlease enter a valid path (with write access): ')
+            if not loc.rstrip(os.sep).endswith('Diary'):     # just put everything in a folder for Diary
+                loc = os.path.join(loc, 'Diary')
+                print 'Note that this will make use of %r' % loc
+                if not os.path.exists(loc):
+                    os.mkdir(loc)
+            loc = loc.rstrip(os.sep) + os.sep
+
+            while True:
+                try:
+                    birth = raw_input('''\
+                                      \nWhen did you start writing this diary? (Press [Enter] for today)\
+                                      \nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
+                                      \nDate: ''')
+                    if not birth:
+                        birthday = datetime.now()
+                    else:
+                        birthday = datetime.strptime(birth, '%Y-%m-%d')
+                        date_hash = hash_format(birthday)
+                        if not os.path.exists(loc + date_hash):
+                            print warning, "Story doesn't exist on that day! (in the given path)"
+                except ValueError:
+                    print error, 'Oops! Error in input. Try again...'
+                    continue
+                break
+
+            birth = '{date:%Y}-{date:%m}-{date:%d}'.format(date = birthday)
+            key = check()
+            if type(key) is not str:
+                return loc, key, birthday, choice
+            with open(ploc, 'a') as file:
+                file.writelines(loc + '\n' + birth)     # Store the location & birth of diary along with the password hash
+
+            choice = 'y'
+            print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % ploc
+            print "And, be careful with that, because invalid configuration files will be deleted during startup!"
+            sleep(3)
+            raw_input('\nPress [Enter] to continue...')
+    except (KeyboardInterrupt, EOFError):
+        sleep(wait)
+    return loc, key, birthday, choice
+
+def check():        # Allows password to be stored locally
+    if not os.path.exists(ploc):
+        try:
+            while True:
+                key = getpass('\nEnter your password: ')
+                if len(key) < 8:
+                    print warning, 'Choose a strong password! (at least 8 chars)'
+                    continue
+                if getpass('Re-enter the password: ') == key:
+                    break
+                else:
+                    print error, "Passwords don't match!"
+            hashed_key = hashed(sha256, key)
+            with open(ploc, 'w') as file:
+                file.writelines(hashed_key + '\n')
+            print success, 'Login credentials have been saved locally!'
+        except (KeyboardInterrupt, EOFError):
+            sleep(wait)
+            print error, "Couldn't store login credentials!"
+            return True
+    else:
+        try:
+            with open(ploc, 'r') as file:
+                hashed_key = file.readlines()[0][:-1]
+            while True:     # Fails if the password doesn't match with the credentials
+                key = getpass('\nEnter your password to continue: ')
+                if hashed_key == hashed(sha256, key):
+                    break
+                print error, 'Wrong password!'
+        except (KeyboardInterrupt, EOFError):
+            sleep(wait)
+            print '\n', error, 'Failed to authenticate!'
+            return None
+    return key
 
 def ask_date(year = 0, month = 0, day = 0):      # Get the date from user
     while True:
@@ -71,41 +154,6 @@ def hash_date(year = 0, month = 0, day = 0, force = False):     # Return a path 
         return None
     return file_name, story
 
-def check():        # Allows password to be stored locally
-    if not os.path.exists(ploc):
-        try:
-            while True:
-                key = getpass('\nEnter your password: ')
-                if len(key) < 8:
-                    print warning, 'Choose a strong password! (at least 8 chars)'
-                    continue
-                if getpass('Re-enter the password: ') == key:
-                    break
-                else:
-                    print error, "Passwords don't match!"
-            hashed_key = hashed(sha256, key)
-            with open(ploc, 'w') as file:
-                file.writelines(hashed_key + '\n')
-            print success, 'Login credentials have been saved locally!'
-        except (KeyboardInterrupt, EOFError):
-            sleep(wait)
-            print error, "Couldn't store login credentials!"
-            return True
-    else:
-        try:
-            with open(ploc, 'r') as file:
-                hashed_key = file.readlines()[0][:-1]
-            while True:     # Fails if the password doesn't match with the credentials
-                key = getpass('\nEnter your password to continue: ')
-                if hashed_key == hashed(sha256, key):
-                    break
-                print error, 'Wrong password!'
-        except (KeyboardInterrupt, EOFError):
-            sleep(wait)
-            print '\n', error, 'Failed to authenticate!'
-            return None
-    return key
-
 def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuff
     with open(path, 'rb') as file:
         data = file.read()
@@ -142,8 +190,6 @@ def try_encrypt(key, file_tuple, encrypt = True):   # just to check whether a fi
             print success, 'Successfully encrypted the file! (%s)' % file_path
             return key
     return None
-
-newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX has only '\r' for newlines
 
 def write(key, file_tuple = None):   # Does all those dirty writing job
     clear_screen()
@@ -221,80 +267,3 @@ def view(key, file_tuple, return_text = False):      # Decrypts and prints the s
         return key
     else:
         return None
-
-def configure(delete = False):      # Configuration file for authentication
-    loc, key, birthday, choice = None, None, None, 'n'
-    try:                            # Well, you have to sign-in for each session!
-        if os.path.exists(ploc) and not delete:
-            print '\nConfiguration file found!'
-            with open(ploc, 'r') as file:
-                config = file.readlines()
-            try:
-                loc = config[1].rstrip(os.sep + '\n') + os.sep
-                assert os.path.exists(loc)
-                birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
-                key = check()
-                if type(key) is str:
-                    choice = 'y'
-                return loc, key, birthday, choice
-            except Exception:
-                clear_screen()
-                print '\nInvalid configuration!'
-                delete = True       # consider this as an invalid configuration
-
-        if delete:
-            if os.path.exists(ploc):
-                print warning, 'Deleting configuration file...'
-                os.remove(ploc)
-            else:
-                print error, 'Configuration file has already been removed!'
-            sleep(2)        # waiting for the user to see the message (before it gets cleared)
-
-        if not os.path.exists(ploc):
-            clear_screen()
-            print "\nLet's start configuring your diary...\n"
-            print 'Enter the (absolute) location for your diary...', \
-                  "\n(Note that this will create a foler named 'Diary' if the path doesn't end with it)"
-            loc = raw_input('\nPath: ')
-            while not write_access(loc):
-                loc = raw_input('\nPlease enter a valid path (with write access): ')
-            if not loc.rstrip(os.sep).endswith('Diary'):     # just put everything in a folder for Diary
-                loc = os.path.join(loc, 'Diary')
-                print 'Note that this will make use of %r' % loc
-                if not os.path.exists(loc):
-                    os.mkdir(loc)
-            loc = loc.rstrip(os.sep) + os.sep
-
-            while True:
-                try:
-                    birth = raw_input('''\
-                                      \nWhen did you start writing this diary? (Press [Enter] for today)\
-                                      \nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
-                                      \nDate: ''')
-                    if not birth:
-                        birthday = datetime.now()
-                    else:
-                        birthday = datetime.strptime(birth, '%Y-%m-%d')
-                        date_hash = hash_format(birthday)
-                        if not os.path.exists(loc + date_hash):
-                            print warning, "Story doesn't exist on that day! (in the given path)"
-                except ValueError:
-                    print error, 'Oops! Error in input. Try again...'
-                    continue
-                break
-
-            birth = '{date:%Y}-{date:%m}-{date:%d}'.format(date = birthday)
-            key = check()
-            if type(key) is not str:
-                return loc, key, birthday, choice
-            with open(ploc, 'a') as file:
-                file.writelines(loc + '\n' + birth)     # Store the location & birth of diary along with the password hash
-
-            choice = 'y'
-            print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % ploc
-            print "And, be careful with that, because invalid configuration files will be deleted during startup!"
-            sleep(3)
-            raw_input('\nPress [Enter] to continue...')
-    except (KeyboardInterrupt, EOFError):
-        sleep(wait)
-    return loc, key, birthday, choice

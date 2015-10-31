@@ -4,6 +4,36 @@ filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweet
 path = os.path.dirname(os.path.abspath(filename))
 
 ploc = os.path.join(os.path.expanduser('~'), '.diary')              # config location (absolute)
+
+def write_access(path, check_path_exists = True):
+    if check_path_exists and not os.path.exists(path):
+        print error, "%s doesn't exist!" % path
+        return False
+    if not os.access(path, os.W_OK):
+        print error, "Couldn't get write access to %s" % path
+        return False
+    return True
+
+if not write_access(os.path.expanduser('~')):
+    print error, "Couldn't get write access to home directory! Checking if the device is a mobile..."
+    check_path = '/mnt/sdcard'  # QPython uses `/data` as home directory, and so let's try with `/mnt/sdcard`
+    try:
+        while not write_access(check_path):
+            check_path = raw_input('\nEnter a path for the config file (which has write-access): ')
+    except KeyboardInterrupt:
+        exit("\nGoodbye...\n")
+    ploc = os.path.join(check_path, '.diary')
+
+    try:
+        print warning, "If you get annoyed by this error and don't wanna do this often," \
+                       + " please offer write acces to the home directory," \
+                       + " move the config file from %s to your home directory (%s)" \
+                       % (ploc, os.path.expanduser('~/.diary'))
+        sleep(3)
+        raw_input('\nPress [Enter] to continue...')
+    except KeyboardInterrupt:
+        pass
+
 load_list = ["core.py", "cipher.py", "options.py", "search.py"]
 map(execfile, map(lambda string: os.path.join(path, "src", string), load_list))
 _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
