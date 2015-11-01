@@ -19,14 +19,14 @@ if not write_access(os.path.expanduser('~')):
     check_path = '/mnt/sdcard'  # QPython uses `/data` as home directory, and so let's try with `/mnt/sdcard`
     try:
         while not write_access(check_path):
-            check_path = raw_input('\nEnter a path for the config file (which has write-access): ')
+            check_path = raw_input('\nEnter a path for the config file (which has write access): ')
     except KeyboardInterrupt:
         exit("\nGoodbye...\n")
     ploc = os.path.join(check_path, '.diary')
 
     try:
         print warning, "If you get annoyed by this error and don't wanna do this often," \
-                       + " please offer write acces to the home directory," \
+                       + " please offer write acces to the home directory, and" \
                        + " move the config file from %s to your home directory (%s)" \
                        % (ploc, os.path.expanduser('~/.diary'))
         sleep(3)
@@ -34,7 +34,7 @@ if not write_access(os.path.expanduser('~')):
     except KeyboardInterrupt:
         pass
 
-load_list = ["core.py", "cipher.py", "options.py", "search.py"]
+load_list = ["core.py", "session.py", "cipher.py", "options.py", "search.py"]
 map(execfile, map(lambda string: os.path.join(path, "src", string), load_list))
 _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
 
