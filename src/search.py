@@ -8,13 +8,11 @@ rustLib = os.path.join(path, 'target', 'release', prefix + 'biographer' + ext)  
 # And, you'll be needing Nightly rust (v1.5.0), because the library depends on a future method and a deprecated method
 
 # Finds the file name using the timedelta from the birth of the diary to a specified date
-def find_story(loc, delta, birthday):
-    stories = len(os.listdir(loc))
-    d = birthday + timedelta(days = delta)
-    file_tuple = hash_date(d.year, d.month, d.day)
-    if not file_tuple:
-        return None
-    return file_tuple
+def find_story(location, delta, birthday):
+    stories = len(os.listdir(location))
+    date = birthday + timedelta(days = delta)
+    file_tuple = hash_date(location, date.year, date.month, date.day)
+    return None if not file_tuple else file_tuple
 
 # Grabs the absolute paths of stories for a given datetime and timedelta objects
 def grab_stories(loc, delta, date):

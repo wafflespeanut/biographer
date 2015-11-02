@@ -1,9 +1,15 @@
-import os
+import os, sys
 from datetime import datetime
 from getpass import getpass
+from hashlib import sha256
 from time import sleep
 
+from core import hashed, hash_format
+
 error, warning, success = "\n[ERROR]", "\n[WARNING]", "\n[SUCCESS]"
+newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
+capture_wait = (0.1 if sys.platform == 'win32' else 0)
+# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -26,9 +32,10 @@ class Session(object):
         self.reset()
         path = os.path.expanduser('~')
         try:    # QPython (Android) uses `/data` as home directory, and so let's try with `/mnt/sdcard`
+            warn = False
             if not os.access(path, os.W_OK):
                 print error, "Couldn't get write access to home directory! Checking if the device is Android..."
-                warn, path = False, '/mnt/sdcard'
+                path = '/mnt/sdcard'
                 while not write_access(path):
                     warn = True
                     path = raw_input('\nEnter a path for the config file: ')
@@ -42,7 +49,7 @@ class Session(object):
                 raw_input('\nPress [Enter] to continue...')
         except KeyboardInterrupt:
             pass
-        if os.access(self.config_location, os.W_OK):
+        if os.access(path, os.W_OK):
             self.configure()
 
     def reset(self):
@@ -53,7 +60,7 @@ class Session(object):
             print warning, 'Deleting configuration file...'
             os.remove(self.config_location)
         else:
-            print error, 'Configuration file has already been removed!'
+            print error, 'Configuration file not found!'
         sleep(2)    # waiting for the user to see the message (before it gets cleared)
 
     def get_pass(self, key_hash = None):    # If key_hash doesn't exist, then it's a "new password" scenario
@@ -68,7 +75,7 @@ class Session(object):
                 if len(self.key) < 8:
                     print warning, 'Choose a strong password! (at least 8 chars)'
                     continue
-                if getpass('Re-enter the password: ') == key:
+                if getpass('Re-enter the password: ') == self.key:
                     break
                 else:
                     print error, "Passwords don't match!"
@@ -86,13 +93,16 @@ class Session(object):
                     assert os.path.exists(self.location)
                     self.birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
                     self.get_pass(key_hash)
+                    self.loop = True
                 except Exception:
                     clear_screen()
                     print '\nInvalid configuration file!'
                     self.reconfigure()
+            else:
+                self.reconfigure()
         except (KeyboardInterrupt, EOFError):
-            sleep(wait)
-            print error, 'Failed to authenticate!'
+            sleep(capture_wait)
+            print '\n', error, 'Failed to authenticate!'
             self.reset()
 
     def reconfigure(self):
@@ -114,7 +124,7 @@ class Session(object):
             self.location = self.location.rstrip(os.sep) + os.sep
 
             while True:
-                try:
+                try:    # 'birthday' of the diary is important because random stories and searching is based on that
                     birth = raw_input('''\
                                       \nWhen did you start writing this diary? (Press [Enter] for today)\
                                       \nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
@@ -123,8 +133,8 @@ class Session(object):
                         self.birthday = datetime.now()
                     else:
                         self.birthday = datetime.strptime(birth, '%Y-%m-%d')
-                        date_hash = hash_format(birthday)
-                        if not os.path.exists(loc + date_hash):
+                        date_hash = hash_format(self.birthday)
+                        if not os.path.exists(self.location + date_hash):
                             print error, "Story doesn't exist on that day! (in the given path)"
                             continue
                     break
@@ -134,7 +144,7 @@ class Session(object):
 
             self.get_pass()
             with open(self.config_location, 'w') as file_data:
-                file_data.write('\n'.join([hashed(sha256, self.key), loc, birth]))
+                file_data.write('\n'.join([hashed(sha256, self.key), self.location, birth]))
             print success, 'Login credentials have been saved locally!'
             self.loop = True
             print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % self.config_location
@@ -143,7 +153,7 @@ class Session(object):
             raw_input('\nPress [Enter] to continue...')
 
         except (KeyboardInterrupt, EOFError):
-            sleep(wait)
+            sleep(capture_wait)
             if not all([self.location, self.key, self.birthday, self.loop]):
                 print error, "Failed to store the login credentials!"
                 if os.path.exists(self.config_location):

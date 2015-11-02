@@ -26,18 +26,17 @@ def mark_text(text, indices, length, color = 'R'):  # Mark text and return corre
         i += 1
     return ''.join(text), new_indices
 
-def random(loc, key, birthday):         # Useful only when you have a lot of stories (obviously)
-    num_stories = len(os.listdir(loc))
+def random(session):    # Useful only when you have a lot of stories (obviously)
+    num_stories = len(os.listdir(session.location))
     if not num_stories:
-        print error, "There's no story in the given location!"
-        return key
+        print error, "There are no stories in the given location!"
+        return
     for i in range(10):
         ch = rchoice(range(num_stories))
-        file_tuple = find_story(loc, ch, birthday)
+        file_tuple = find_story(session.location, ch, session.birthday)
         if file_tuple:
-            return view(key, file_tuple)
+            return view(session.key, file_tuple)
     print '\nPerhaps, this may not be a valid path after all...'
-    return key
 
 def backup(loc, key, bloc = None):
     if not bloc:
@@ -72,7 +71,7 @@ def change_pass(loc, key, birthday):      # Exhaustive method to change the pass
             temp_stripped = temp_loc.rstrip(os.sep)
             if os.path.dirname(temp_stripped) == loc_stripped:
                 print "Ensure that the working directory is not within your diary's directory!"
-            elif write_access(os.path.dirname(temp_stripped), False):
+            elif os.access(os.path.dirname(temp_stripped), os.W_OK):
                 break
             temp_loc = raw_input('Enter a path to choose as working directory: ') + os.sep + 'TEMP'
         shutil.copytree(loc, temp_loc)          # always have some precautions!
@@ -118,9 +117,10 @@ def change_pass(loc, key, birthday):      # Exhaustive method to change the pass
         return key
 
     print
-    if write_access(loc):
+    if os.access(loc, os.W_OK):
         shutil.rmtree(loc)
     else:
+        shutil.rmtree(temp_loc)
         print error, 'Directory is read-only! Failed to change the password!'
         return key
     print "\nOverwriting the existing stories... (Please don't interrupt now!)"
