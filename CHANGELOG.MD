@@ -8,13 +8,13 @@
 
 ### Changelog
 
-<sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
+<sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat interesting & appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-<!-- **v0.6.0**: *Biographer*
-- Added arguments for invoking the various options directly through command-line (for instance, you can pass view/write/search arguments directly as you invoke the script)
+**[v0.6.0]()**: *Biographer*
 - Changed the behavior of various functions and added some flexibility
-- Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
-- Added an option for printing search results in both ugly and pretty ways -->
+- Rewrote the entire script using objects
+- - Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
+- Added an option for printing search results in both ugly and pretty ways
 
 **[v0.5.1](https://github.com/Wafflespeanut/biographer/tree/7bdbf77879bd4e33544f9d13aaaf3ecda35ab054)**: *Biographer*
 - Added support for QPython in Android

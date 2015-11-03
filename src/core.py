@@ -12,7 +12,7 @@ def ask_date(year = 0, month = 0, day = 0):      # Get the date from user
                 day = int(raw_input('\nDay: '))
             return datetime(year, month, day)
         except Exception:
-            print error, 'Invalid input! Cannot parse the given date!'
+            print sess.error, 'Invalid input! Cannot parse the given date!'
             year, month, day = 0, 0, 0
             continue
 
@@ -45,12 +45,12 @@ def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuf
     if not len(data):
         print sess.error, 'Nothing in file!'
         return key
-    if mode == 'e':                 # a little stunt to strip '\r' from the lines
+    if mode == 'e':     # a little stunt to strip '\r' from the lines
         data = zombify(mode, sess.newline.join(data.split('\r')), key)
     else:
         data = zombify(mode, data, key)
     if not data:        # Couldn't extract the chars from bytes! Indicates failure while decrypting
-        print sess.error, 'Cannot decrypt the story! (probably wrong ciphertext-key combination)'
+        print sess.error, 'Cannot decrypt the story! (filename hash: %s)' % path
         return None
     if mode in ('e', 'w'):
         with open(path, 'wb') as file:
@@ -117,7 +117,7 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
     with open(File, 'a') as file:
         file.writelines('\n\t'.join(data) + '\n\n')
     protect(File, 'e', session.key)
-    if raw_input(success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
+    if raw_input(sess.success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
         view(session.key, file_tuple)
 
 def view(key, file_tuple, return_text = False):      # Decrypts and prints the story on the screen

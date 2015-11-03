@@ -92,11 +92,12 @@ class Session(object):
                     self.location = config[1].rstrip(os.sep + '\n') + os.sep
                     assert os.path.exists(self.location)
                     self.birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
+                    assert os.path.exists(self.location + hash_format(self.birthday))
                     self.get_pass(key_hash)
                     self.loop = True
-                except Exception:
+                except (AssertionError, IndexError, ValueError):
                     clear_screen()
-                    print '\nInvalid configuration file!'
+                    print 'Invalid configuration file!'
                     self.reconfigure()
             else:
                 self.reconfigure()
@@ -113,9 +114,9 @@ class Session(object):
         try:
             print '\nEnter the (absolute) location for your diary...' + \
                   "\n(Note that this will create a foler named 'Diary' if the path doesn't end with it)"
-            self.location = raw_input('\nPath: ')
+            self.location = os.path.expanduser(raw_input('\nPath: '))
             while not write_access(self.location):
-                self.location = raw_input('\nPlease enter a valid path: ')
+                self.location = os.path.expanduser(raw_input('\nPlease enter a valid path: '))
             if not self.location.rstrip(os.sep).endswith('Diary'):  # just put everything in a folder for Diary
                 self.location = os.path.join(self.location, 'Diary')
                 print 'Reminding you that this will make use of %r' % self.location
@@ -133,9 +134,8 @@ class Session(object):
                         self.birthday = datetime.now()
                     else:
                         self.birthday = datetime.strptime(birth, '%Y-%m-%d')
-                        date_hash = hash_format(self.birthday)
-                        if not os.path.exists(self.location + date_hash):
-                            print error, "Story doesn't exist on that day! (in the given path)"
+                        if not os.path.exists(self.location + hash_format(self.birthday)):
+                            print error, "A story doesn't exist on that day! (in the given path)"
                             continue
                     break
                 except ValueError:
