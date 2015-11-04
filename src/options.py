@@ -114,7 +114,7 @@ def change_pass(session):   # Exhaustive method to change the password
     print "\nOverwriting the existing stories... (Please don't interrupt now!)"
     os.rename(temp_loc, session.location)
     print 'Modifying the configuration file...'
-    with open(session.config_location, 'w') as file:
-        file.writelines('\n'.join([hashed(sha256, new_key), session.location, birth]))
+    with open(session.config_location, 'w') as file_data:
+        file_data.writelines('\n'.join([hashed(sha256, new_key), session.location, birth]))
     print sess.success, 'Password has been changed!'
     session.key = new_key

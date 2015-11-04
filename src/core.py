@@ -14,7 +14,6 @@ def ask_date(year = 0, month = 0, day = 0):      # Get the date from user
         except Exception:
             print sess.error, 'Invalid input! Cannot parse the given date!'
             year, month, day = 0, 0, 0
-            continue
 
 def hashed(hash_function, text):     # Hashing function (could be MD5 or SHA-256)
     hash_object = hash_function()
@@ -59,24 +58,29 @@ def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuf
     else:
         return data, key
 
+class SuppressOutput(object):    # solely to suprress the printing of a function
+    def write(self, arg):
+        pass
+
 def try_encrypt(key, file_tuple, encrypt = True):
     if not file_tuple:
         return
     file_path = file_tuple[0]
-    try:    # just to check whether a file has already been encrypted
-        if encrypt and protect(file_path, 'd', key):
+    if encrypt:
+        suppress_object = SuppressOutput()
+        old_stdout, sys.stdout = sys.stdout, suppress_object
+        data = protect(file_path, 'd', key)     # this function's output has been suppressed
+        sys.stdout = old_stdout
+        if data:    # just to check whether a file has already been encrypted
             print sess.error, "This file looks like it's already been encrypted.", \
                          "\nIt's never encouraged to use this algorithm for encryption more than once!"
-            return
-    except TypeError:
-        if encrypt:
+        else:
             protect(file_path, 'e', key)
             print sess.success, 'Successfully encrypted the file! (%s)' % file_path
-            return
     return
 
 def write(session, file_tuple = None):  # Does all those dirty writing job
-    if type(file_tuple) == str:
+    if type(file_tuple) is str:
         return
     sess.clear_screen()
     keystroke = 'Ctrl+C'
@@ -90,7 +94,7 @@ def write(session, file_tuple = None):  # Does all those dirty writing job
         file_tuple = (session.location + date_hash, story)
     File = file_tuple[0]
     if os.path.exists(File) and os.path.getsize(File):  # "Intentionally" decrypting the original file
-        if not protect(File, 'w', session.key): # an easy workaround to modify your original story
+        if not protect(File, 'w', session.key):     # an easy workaround to modify your original story
             return None
         else:
             print '\nStory already exists! Appending to the current story...'
@@ -121,7 +125,7 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
         view(session.key, file_tuple)
 
 def view(key, file_tuple, return_text = False):      # Decrypts and prints the story on the screen
-    if type(file_tuple) == tuple:                    # also returns the text on request
+    if type(file_tuple) is tuple:                    # also returns the text on request
         data_tuple = protect(file_tuple[0], 'd', key)
         if data_tuple:
             count = 0
@@ -144,7 +148,7 @@ def view(key, file_tuple, return_text = False):      # Decrypts and prints the s
             return key
         else:
             return None
-    elif type(file_tuple) == str:
+    elif type(file_tuple) is str:
         return key
     else:
         return None

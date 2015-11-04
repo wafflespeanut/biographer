@@ -140,7 +140,6 @@ class Session(object):
                     break
                 except ValueError:
                     print error, 'Oops! Error in input. Try again...'
-                    continue
 
             self.get_pass()
             with open(self.config_location, 'w') as file_data:

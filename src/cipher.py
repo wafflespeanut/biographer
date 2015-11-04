@@ -1,3 +1,5 @@
+import os
+
 def hexed(text):                    # Hexing function
     return map(lambda i: format(ord(i), '02x'), list(text))
 
@@ -11,21 +13,19 @@ def char(text):                     # Hex-decoding function
 def CXOR(text, key):                # Byte-wise XOR
     def xor(char1, char2):
         return chr(ord(char1) ^ ord(char2))
-    out = ''
-    i, j = 0, 0
+    i, j, out = 0, 0, ''
     while i < len(text):
         out += xor(text[i], key[j])
         (i, j) = (i + 1, j + 1)
-        if j == len(key):
-            j = 0
+        if j == len(key): j = 0
     return ''.join(out)
 
 def shift(text, amount):            # Shifts the ASCII value of the chars
     try:
-        shiftedText = (chr((ord(ch) + amount) % 256) for ch in text)
+        shifted_text = (chr((ord(ch) + amount) % 256) for ch in text)
     except TypeError:
         return None
-    return ''.join(shiftedText)
+    return ''.join(shifted_text)
 
 def CBC(mode, data, power):         # Splits & chains into blocks (for some randomness)
     size = 2 ** power               # Each step of hexing doubles the bytes
@@ -34,13 +34,13 @@ def CBC(mode, data, power):         # Splits & chains into blocks (for some rand
             data = ''.join(hexed(data))
         blocks = [os.urandom(size)] + [data[i:i+size] for i in range(0, len(data), size)]
         for i in range(1, len(blocks)):
-            blocks[i] = CXOR(blocks[i-1], blocks[i])
+            blocks[i] = CXOR(blocks[i - 1], blocks[i])
         return ''.join(blocks)
-    elif mode in ('d', 'w'):
+    elif mode == 'd':
         try:
             blocks = [data[i:i+size] for i in range(0, len(data), size)]
             for i in range(1, len(blocks))[::-1]:
-                blocks[i] = CXOR(blocks[i-1], blocks[i])
+                blocks[i] = CXOR(blocks[i - 1], blocks[i])
             data = ''.join(blocks[1:])
             for i in range(power):
                 data = char(data)

@@ -117,7 +117,7 @@ fn count_words(file_name: &str, key: &str, word: &str) -> String {
     let contents = fopen(&file_name).1;
     let decrypted = zombify(0, &contents, key);
     if decrypted.is_empty() {
-        println!("\nCannot decrypt story! (filename hash: {})", file_name);
+        println!("\nCannot decrypt the story! (file: {})", file_name);
         return "0".to_owned();
     } search(&decrypted, word)
 }

@@ -11,9 +11,8 @@
 <sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat interesting & appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
 **[v0.6.0]()**: *Biographer*
-- Changed the behavior of various functions and added some flexibility
-- Rewrote the entire script using objects
-- - Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
+- Rewrote the entire program using objects, thereby cleaning up *seven hells* of garbage code! (I've just realized that *readability* is more important compared to performance, as the latter can always be improved)
+- Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
 - Added an option for printing search results in both ugly and pretty ways
 
 **[v0.5.1](https://github.com/Wafflespeanut/biographer/tree/7bdbf77879bd4e33544f9d13aaaf3ecda35ab054)**: *Biographer*
