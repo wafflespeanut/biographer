@@ -1,5 +1,5 @@
 #![feature(cstr_memory2)]
-#![allow(deprecated, unused_imports)]
+#![allow(dead_code, deprecated, unused_imports)]
 
 extern crate libc;
 extern crate rand as random;
@@ -7,7 +7,7 @@ extern crate rustc_serialize as serialize;
 
 mod cipher;
 
-use cipher::zombify;
+use cipher::{Mode, zombify};
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::Read;
@@ -36,13 +36,13 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
     let word = stuff.pop().unwrap();
     let key = stuff.pop().unwrap();
 
-    // // pure iteration (decreases the time by a factor of 110 ± 10)
+    // // pure iteration (decreases the time by a factor of 50 ± 10)
     // let occurrences = stuff
     //                   .iter()
     //                   .map(|file_name| count_words(&file_name, &key, &word))
     //                   .collect::<Vec<String>>();
 
-    // // basic concurrency (decreases the time by a factor of 160 ± 10)
+    // // basic concurrency - threads (decreases the time by a factor of 65 ± 10)
     // let threads: Vec<_> = stuff
     //                       .into_iter()
     //                       .enumerate()
@@ -54,19 +54,19 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
     //                          .map(|handle| handle.join().unwrap())
     //                          .collect();
 
-    // awesome channels (decrease the time by a factor of 220 ± 10)
+    // channels show more or less the same performance (decrease the time by a factor of 80 ± 10)
     let (tx, rx) = mpsc::channel();
     let threads: Vec<_> = stuff
                           .into_iter()
                           .enumerate()
                           .map(|(idx, file_name)| {
                               let tx = tx.clone();
-                              thread::spawn(move || {   // send() the results as soon as they're done
+                              thread::spawn(move || {
                                   tx.send((idx, count_words(&file_name, &key, &word))).unwrap()
                               })
                           }).collect();
     let mut result: Vec<(usize, String)> = threads
-                                           .iter()      // ... and recv() them later
+                                           .iter()
                                            .map(|_| rx.recv().unwrap())
                                            .collect();
 
@@ -92,7 +92,7 @@ fn fopen(path: &str) -> (usize, Vec<u8>) {
 
 // Checks if the big vector contains the small vector slice and returns a string of indices
 fn search(text_vec: &[u8], word: &str) -> String {
-    // we're safe here, because we've already filtered the "failure" case
+    // We're safe here, because we've already filtered the "failure" case
     let mut text = &*(String::from_utf8_lossy(text_vec));
     let mut indices = Vec::new();
     let mut idx = 0;
@@ -115,7 +115,7 @@ fn search(text_vec: &[u8], word: &str) -> String {
 // This just decrypts the file and counts the word in it (just to simplify things)
 fn count_words(file_name: &str, key: &str, word: &str) -> String {
     let contents = fopen(&file_name).1;
-    let decrypted = zombify(0, &contents, key);
+    let decrypted = zombify(Mode::Decrypt, &contents, key);
     if decrypted.is_empty() {
         println!("\nCannot decrypt the story! (file: {})", file_name);
         return "0".to_owned();

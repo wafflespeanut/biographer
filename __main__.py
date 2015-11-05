@@ -47,7 +47,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 1: ("Write today's story", 'write(session)'),
                 2: ("Random story", 'random(session)'),
                 3: ("View the story of someday", 'view(session.key, hash_date(session.location))'),
-                4: ("Write the story for someday you've missed", 'write(session, hash_date(session.location, True))'),
+                4: ("Write (or append to) the story of someday", 'write(session, hash_date(session.location, True))'),
                 5: ("Search your stories", 'search(session)'),
                 6: ("Backup your stories", 'backup(session)'),
                 7: ("Change your password", 'change_pass(session)'),

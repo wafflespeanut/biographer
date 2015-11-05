@@ -35,7 +35,7 @@ class Story(object):
     def __init__(self, session, when = None):
         if when == 'today' or when == 'now':
             self.date = datetime.now()
-        elif type(when) == str:
+        elif type(when) is str:
             self.date = datetime.strptime(when, '%Y-%m-%d')
         else:
             self.date = get_date()
@@ -64,7 +64,7 @@ class Story(object):
 
     def decrypt(self, overwrite = False):
         data = zombify(mode, self.read_data(), self.key)
-        assert type(data) is str
+        assert data         # checking whether decryption has succeeded
         if overwrite:
             self.write_data(data)
         else:

@@ -13,6 +13,7 @@
 **[v0.6.0]()**: *Biographer*
 - Rewrote the entire program using objects, thereby cleaning up *seven hells* of garbage code! (I've just realized that *readability* is more important compared to performance, as the latter can always be improved)
 - Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
+- Fixed the cipher algorithm which has reduced the time taken by Python for searching (but, a recent deprecation in the standard Rust library has brought our searching time down - now, it's only ~100 times faster than Python)
 - Added an option for printing search results in both ugly and pretty ways
 
 **[v0.5.1](https://github.com/Wafflespeanut/biographer/tree/7bdbf77879bd4e33544f9d13aaaf3ecda35ab054)**: *Biographer*
@@ -21,7 +22,7 @@
 - Search results now show a slice of the output while printing (costs some time while printing the output)
 
 **[v0.5.0](https://github.com/Wafflespeanut/biographer/tree/c53ba745359424c991d089073bd7891f88e547d6)**: *Biographer* (stable)
-- Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~100), even before including *concurrency* (which amplifies the factor up to ~230).
+- Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~50), even before including *concurrency* (which amplifies the factor further up to <s>~230</s> ~100).
 - Improved the code structure, interface & searching
 - Added a variety of options from changing the password to backing up stories
 - Updated the functions with an `EOFError` workaround to support the script on the Windows command prompt

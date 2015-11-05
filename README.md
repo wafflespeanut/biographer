@@ -10,7 +10,7 @@ It supports some basic encryption. I've used a simple algorithm to hex and shift
 
 A local file has a SHA-256 hash of the original password, so that instead of typing the password every time you write/view some story, you can simply sign in, which asks you for a password only once per session *(of course!)*.
 
-And, the cool part - you can search through your stories for a specific word (between a range of dates) either using Python (which takes some time, depending on the number of stories you have) or the provided Rust library ([which amplifies the performance by a factor of ~230](https://wafflespeanut.github.io/blog/2015/07/08/a-pythonist-getting-rusty-these-days-dot-dot-dot-part-2/)). Also, it's just a basic (case-sensitive) search.
+And, the cool part - you can search through your stories for a specific word (between a range of dates) either using Python (which takes some time, depending on the number of stories you have) or the provided Rust library ([which amplifies the performance by a factor of ~100](https://wafflespeanut.github.io/blog/2015/07/08/a-pythonist-getting-rusty-these-days-dot-dot-dot-part-2/)). Also, it's just a basic (case-sensitive) search.
 
 Regarding cross-platforms, I've tested it on Windows 8 and Ubuntu, but I'm not sure about other OS (I guess it works for them just as well). Oh, and it also runs on Android (if you've got [QPython](https://play.google.com/store/apps/details?id=com.hipipal.qpyplus)) installed.
 
