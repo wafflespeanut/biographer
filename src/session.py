@@ -59,13 +59,11 @@ class Session(object):
         if os.path.exists(self.config_location):
             print warning, 'Deleting configuration file...'
             os.remove(self.config_location)
-        else:
-            print error, 'Configuration file not found!'
-        sleep(2)    # waiting for the user to see the message (before it gets cleared)
+            sleep(2)    # wait for the user to see the message (before it gets cleared)
 
-    def get_pass(self, key_hash = None):    # If key_hash doesn't exist, then it's a "new password" scenario
+    def get_pass(self, key_hash = None):
         while True:
-            if key_hash:
+            if key_hash:    # If key_hash doesn't exist, then it's a "new password" scenario
                 self.key = getpass('\nEnter your password to continue: ')
                 if key_hash == hashed(sha256, self.key):
                     break
@@ -132,6 +130,7 @@ class Session(object):
                                       \nDate: ''')
                     if not birth:
                         self.birthday = datetime.now()
+                        birth = self.birthday.strftime('%Y-%m-%d')
                     else:
                         self.birthday = datetime.strptime(birth, '%Y-%m-%d')
                         if not os.path.exists(self.location + hash_format(self.birthday)):

@@ -67,8 +67,7 @@ def try_encrypt(key, file_tuple, encrypt = True):
         return
     file_path = file_tuple[0]
     if encrypt:
-        suppress_object = SuppressOutput()
-        old_stdout, sys.stdout = sys.stdout, suppress_object
+        old_stdout, sys.stdout = sys.stdout, SuppressOutput()
         data = protect(file_path, 'd', key)     # this function's output has been suppressed
         sys.stdout = old_stdout
         if data:    # just to check whether a file has already been encrypted

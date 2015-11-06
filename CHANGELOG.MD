@@ -5,6 +5,7 @@
 - [ ] Timestamp at the start of the story compromises the cipher
 - [ ] Improve the code structure using objects
 - [ ] Setup command-line options for writing, viewing and searching
+- [ ] Update Rust library to change password
 
 ### Changelog
 

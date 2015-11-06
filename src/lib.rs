@@ -117,7 +117,7 @@ fn count_words(file_name: &str, key: &str, word: &str) -> String {
     let contents = fopen(&file_name).1;
     let decrypted = zombify(Mode::Decrypt, &contents, key);
     if decrypted.is_empty() {
-        println!("\nCannot decrypt the story! (file: {})", file_name);
+        println!("\nCannot decrypt the story! (filepath: {})", file_name);
         return "0".to_owned();
     } search(&decrypted, word)
 }

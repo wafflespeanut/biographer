@@ -1,5 +1,5 @@
 import inspect, os, sys
-from src import session as sess
+from src import session as sess, story
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
 path = os.path.dirname(os.path.abspath(filename))
@@ -53,7 +53,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 7: ("Change your password", 'change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
-                9: ("Encrypt a story", 'try_encrypt(session.key, hash_date(session.location))'),
+                9: ("Encrypt a story", 'story.Story(session).encrypt()'),
                 0: ("Exit the biographer", ''),
             }
 
@@ -66,7 +66,10 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                     session.loop = False
                     break
                 exec(choices[ch][1])
+                assert session.loop
                 session.loop = True if raw_input('\nDo something again (y/n)? ') == 'y' else False
+            except AssertionError:
+                break
             except (ValueError, KeyError):      # invalid input
                 print sess.error, "Please enter a valid input! (between 0 and %s)" % (len(choices) - 1)
                 sleep(2)
@@ -74,9 +77,9 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 sleep(sess.capture_wait)
         except Exception as err:       # An uncaught exception (which has probably creeped all the way up here)
             try:
-                print sess.error, err, 'Ah, something bad has happened! Maybe this is a bug, or try reconfiguring your diary?'
+                print sess.error, err, 'Ah, something bad has happened! Maybe try reconfiguring your diary?'
                 sleep(2)
-            except (KeyboardInterrupt, EOFError):       # just to not quit while displaying
+            except (KeyboardInterrupt, EOFError):   # just to not quit while displaying
                 sleep(sess.capture_wait)
         except (KeyboardInterrupt, EOFError):
             # EOFError was added just to make this script work on Windows (honestly, Windows sucks!)
