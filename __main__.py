@@ -1,5 +1,6 @@
 import inspect, os, sys
-from src import session as sess, story
+from src import session as sess
+from src.story import Story
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
 path = os.path.dirname(os.path.abspath(filename))
@@ -44,16 +45,16 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 print '\n\t### This program runs best on Linux terminal ###'
             print '\n\tWhat do you wanna do?\n'
             choices = {     # how the option will be displayed, and its corresponding executable line
-                1: ("Write today's story", 'write(session)'),
+                1: ("Write today's story", 'Story(session, "today").write()'),
                 2: ("Random story", 'random(session)'),
                 3: ("View the story of someday", 'view(session.key, hash_date(session.location))'),
-                4: ("Write (or append to) the story of someday", 'write(session, hash_date(session.location, True))'),
+                4: ("Write (or append to) the story of someday", 'Story(session).write()'),
                 5: ("Search your stories", 'search(session)'),
                 6: ("Backup your stories", 'backup(session)'),
                 7: ("Change your password", 'change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
-                9: ("Encrypt a story", 'story.Story(session).encrypt()'),
+                9: ("Encrypt a story", 'Story(session).encrypt()'),
                 0: ("Exit the biographer", ''),
             }
 

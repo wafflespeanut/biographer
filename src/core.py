@@ -78,51 +78,6 @@ def try_encrypt(key, file_tuple, encrypt = True):
             print sess.success, 'Successfully encrypted the file! (%s)' % file_path
     return
 
-def write(session, file_tuple = None):  # Does all those dirty writing job
-    if type(file_tuple) is str:
-        return
-    sess.clear_screen()
-    keystroke = 'Ctrl+C'
-    now = datetime.now()
-    if sys.platform == 'win32':
-        print sess.warning, "If you're using the command prompt, don't press %s while writing!" % keystroke
-        keystroke = 'Ctrl+Z and [Enter]'
-    if not file_tuple:
-        date_hash = hash_format(now)
-        story = '{date:%B} {date:%d}, {date:%Y} ({date:%A}) ...'.format(date = now)
-        file_tuple = (session.location + date_hash, story)
-    File = file_tuple[0]
-    if os.path.exists(File) and os.path.getsize(File):  # "Intentionally" decrypting the original file
-        if not protect(File, 'w', session.key):     # an easy workaround to modify your original story
-            return None
-        else:
-            print '\nStory already exists! Appending to the current story...'
-            print '(filename hash: %s)' % file_tuple[0].split(os.sep)[-1]        # useful for finding the file
-    timestamp = str(now).split('.')[0].split(' ')
-    data = ['[' + timestamp[0] + '] ' + timestamp[1] + '\n']
-    try:
-        stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
-to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you're done!)\n\n\t".format(keystroke))
-        data.append(stuff)
-    except (KeyboardInterrupt, EOFError):
-        sleep(sess.capture_wait)
-        print '\nNothing written! Quitting...'
-        if os.path.exists(File) and os.path.getsize(File):
-            protect(File, 'e', session.key)
-        return
-    while True:
-        try:
-            stuff = raw_input('\t')     # auto-tabbing of paragraphs (for each [RETURN])
-            data.append(stuff)
-        except (KeyboardInterrupt, EOFError):
-            sleep(sess.capture_wait)
-            break
-    with open(File, 'a') as file:
-        file.writelines('\n\t'.join(data) + '\n\n')
-    protect(File, 'e', session.key)
-    if raw_input(sess.success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
-        view(session.key, file_tuple)
-
 def view(key, file_tuple, return_text = False):      # Decrypts and prints the story on the screen
     if type(file_tuple) is tuple:                    # also returns the text on request
         data_tuple = protect(file_tuple[0], 'd', key)

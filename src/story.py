@@ -2,6 +2,7 @@ import os, sys
 from datetime import datetime
 from hashlib import md5
 from string import punctuation
+from time import sleep
 
 from cipher import zombify
 import session as sess
@@ -21,7 +22,7 @@ def get_date():     # global function for getting date from the user in the abse
             print sess.error, 'Invalid input! Cannot parse the given date!'
             year, month, day = [None] * 3
 
-def hashed(hash_function, text):     # global hashing function (may use MD5 or SHA-256)
+def hasher(hash_function, text):     # global hashing function (may use MD5 or SHA-256)
     hash_object = hash_function()
     hash_object.update(text)
     return hash_object.hexdigest()
@@ -39,11 +40,16 @@ class Story(object):
             self.date = datetime.strptime(when, '%Y-%m-%d')
         else:
             self.date = get_date()
+        if self.date < session.birthday:    # just in case if you plan to write your past days beyond the birthday
+            print sess.warning, "Reconfiguring your diary to include those 'past' days..."
+            session.birthday = self.date
+            session.write_to_config_file()
+            sleep(1)
         self.path = os.path.join(session.location, self.get_hash())
         self.key = session.key      # have a copy of the password so that we don't always have to invoke Session
 
     def get_hash(self):
-        return hashed(md5, self.date.strftime('Day %d (%B %Y)'))
+        return hasher(md5, self.date.strftime('Day %d (%B %Y)'))
 
     def get_path(self):     # return the path only if the file exists and it's not empty
         return self.path if os.path.exists(self.path) and os.path.getsize(self.path) else None
@@ -53,7 +59,7 @@ class Story(object):
             return file_data.read()
 
     def write_data(self, data, mode = 'wb'):
-        with open(self.path, 'wb') as file:
+        with open(self.path, mode) as file:
             file.write(data)
 
     def encrypt(self, echo = True):
@@ -72,14 +78,14 @@ class Story(object):
     def decrypt(self, overwrite = False):
         data = zombify('d', self.read_data(), self.key)
         assert data         # checking whether decryption has succeeded
-        if overwrite:       # we catch the AssertionError to indicate the wrong password input
+        if overwrite:       # we catch the AssertionError later to indicate the wrong password input
             self.write_data(data)
         else:
             return data
 
     def write(self):
         sess.clear_screen()
-        keystroke = 'Ctrl+C'
+        input_loop, keystroke = True, 'Ctrl+C'
         if sys.platform == 'win32':
             print sess.warning, "If you're using the command prompt, don't press %s while writing!" % keystroke
             keystroke = 'Ctrl+Z and [Enter]'
@@ -91,17 +97,18 @@ class Story(object):
             except AssertionError:
                 print sess.error, "Bleh! Couldn't decrypt today's story! Check your password!"
                 return
-        data = [datetime.now().strftime('[%Y-%M-%d] %H:%M:%S\n')]
+        data = [datetime.now().strftime('[%Y-%m-%d] %H:%M:%S\n')]
         try:
             stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
 to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you're done!)\n\n\t".format(keystroke))
             data.append(stuff)
         except (KeyboardInterrupt, EOFError):
             sleep(sess.capture_wait)
-            print '\nNothing written! Quitting...'
+            print "\nAlright, let's save it for a later time then! Quitting..."
             if self.get_path():
-                self.encrypt(echo = False)
-        while True:
+                data.append('--- You were about to write something at this time? ---')
+                input_loop = False
+        while input_loop:
             try:
                 stuff = raw_input('\t')     # auto-tabbing of paragraphs (for each [RETURN])
                 data.append(stuff)
@@ -110,15 +117,16 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
                 break
         self.write_data('\n\t'.join(data) + '\n\n', 'a')
         self.encrypt(echo = False)
-        if raw_input(sess.success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
+        if input_loop and raw_input(sess.success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
             self.view()
 
     def view(self, return_text = False):
         date_format = self.date.strftime('%B %d, %Y (%A)')
         try:
-            data = self.decrypt()
+            count, data = 0, self.decrypt()
         except AssertionError:
             print sess.error, "Baaah! Couldn't decrypt the story!"
+            return
         sess.clear_screen()
         split_data = data.split()
         for word in split_data:     # Simple word counter (ignoring the timestamp)

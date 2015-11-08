@@ -4,7 +4,7 @@ from getpass import getpass
 from hashlib import sha256
 from time import sleep
 
-from core import hashed, hash_format
+from story import Story, hasher
 
 error, warning, success = "\n[ERROR]", "\n[WARNING]", "\n[SUCCESS]"
 newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
@@ -55,7 +55,7 @@ class Session(object):
     def reset(self):
         self.location, self.key, self.birthday, self.loop = [None] * 3 + [False]
 
-    def delete_config(self):
+    def delete_config_file(self):
         if os.path.exists(self.config_location):
             print warning, 'Deleting configuration file...'
             os.remove(self.config_location)
@@ -65,7 +65,7 @@ class Session(object):
         while True:
             if key_hash:    # If key_hash doesn't exist, then it's a "new password" scenario
                 self.key = getpass('\nEnter your password to continue: ')
-                if key_hash == hashed(sha256, self.key):
+                if key_hash == hasher(sha256, self.key):
                     break
                 print error, 'Wrong password!'
             else:
@@ -86,15 +86,16 @@ class Session(object):
                 with open(self.config_location, 'r') as file_data:
                     config = file_data.readlines()
                 try:
-                    key_hash = config[0].rstrip('\n')
+                    key_hash, birth = config[0].rstrip('\n'), config[2].rstrip('\n')
                     self.location = config[1].rstrip(os.sep + '\n') + os.sep
                     assert os.path.exists(self.location)
-                    self.birthday = datetime.strptime(config[2].strip(), '%Y-%m-%d')
-                    assert os.path.exists(self.location + hash_format(self.birthday))
+                    self.birthday = datetime.strptime(birth, '%Y-%m-%d')
+                    # say, you've just created the config and gone for vacation!
+                    if (datetime.now() - self.birthday).days not in range(3):
+                        assert os.path.exists(self.location + Story(self, birth).get_hash())
                     self.get_pass(key_hash)
                     self.loop = True
                 except (AssertionError, IndexError, ValueError):
-                    clear_screen()
                     print 'Invalid configuration file!'
                     self.reconfigure()
             else:
@@ -104,8 +105,21 @@ class Session(object):
             print '\n', error, 'Failed to authenticate!'
             self.reset()
 
+    # This will come in handy because whenever we wanna rewrite the configuration file,
+    # we could just overwrite the object and call this function
+    def write_to_config_file(self):
+        if os.path.exists(self.config_location) and os.path.getsize(self.config_location):
+            msg = 'Configuration file has been updated!'
+        else:
+            msg = 'Login credentials have been saved locally!'
+        with open(self.config_location, 'w') as file_data:
+            file_data.write('\n'.join([hasher(sha256, self.key),
+                                       self.location,
+                                       self.birthday.strftime('%Y-%m-%d')]))
+        print success, msg
+
     def reconfigure(self):
-        self.delete_config()
+        self.delete_config_file()
         clear_screen()
         print "\nLet's start configuring your diary..."
 
@@ -130,10 +144,9 @@ class Session(object):
                                       \nDate: ''')
                     if not birth:
                         self.birthday = datetime.now()
-                        birth = self.birthday.strftime('%Y-%m-%d')
                     else:
                         self.birthday = datetime.strptime(birth, '%Y-%m-%d')
-                        if not os.path.exists(self.location + hash_format(self.birthday)):
+                        if not Story(self, birth).get_path():
                             print error, "A story doesn't exist on that day! (in the given path)"
                             continue
                     break
@@ -141,9 +154,7 @@ class Session(object):
                     print error, 'Oops! Error in input. Try again...'
 
             self.get_pass()
-            with open(self.config_location, 'w') as file_data:
-                file_data.write('\n'.join([hashed(sha256, self.key), self.location, birth]))
-            print success, 'Login credentials have been saved locally!'
+            self.write_to_config_file()
             self.loop = True
             print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % self.config_location
             print "And, be careful with that, because invalid configuration files will be deleted during startup!"
