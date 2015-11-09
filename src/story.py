@@ -33,14 +33,17 @@ class Story(object):
     For example, one can get its filename hash, the data contained in it,
     tell whether it should be encrypted or decrypted, whether it's new, etc.
     '''
-    def __init__(self, session, when = None):
+    def __init__(self, session, when = None, is_write = False):
         if when == 'today' or when == 'now':
             self.date = datetime.now()
         elif type(when) is str:
             self.date = datetime.strptime(when, '%Y-%m-%d')
+        elif type(when) is datetime:
+            self.date = when
         else:
             self.date = get_date()
-        if self.date < session.birthday:    # just in case if you plan to write your past days beyond the birthday
+        # just in case if you plan to write your past days beyond the birthday
+        if is_write and self.date < session.birthday:   # you wouldn't want this when you're viewing!
             print sess.warning, "Reconfiguring your diary to include those 'past' days..."
             session.birthday = self.date
             session.write_to_config_file()
@@ -54,6 +57,8 @@ class Story(object):
     def get_path(self):     # return the path only if the file exists and it's not empty
         return self.path if os.path.exists(self.path) and os.path.getsize(self.path) else None
 
+    # read_data(), write_data(), encrypt() & decrypt() blindly assumes that the file exists
+    # catching for IOErrors every time is rather boring, and so we can utilize get_path() to handle the "absence" case
     def read_data(self):
         with open(self.path, 'rb') as file_data:
             return file_data.read()
@@ -63,10 +68,10 @@ class Story(object):
             file.write(data)
 
     def encrypt(self, echo = True):
-        try:    # just to check whether a file has already been encrypted
+        try:    # exhaustive process, just to check whether a file has already been encrypted
             data = self.decrypt()
-            print sess.error, "This file looks like it's already been encrypted.", \
-                  "\nIt's never encouraged to use this algorithm for encryption more than once!"
+            print sess.error, "This file looks has already been encrypted! (filename hash: %s)" % self.get_hash(), \
+                              "\nIt's never encouraged to use this algorithm for encryption more than once!"
             return
         except AssertionError:
             file_data = self.read_data()
@@ -91,12 +96,12 @@ class Story(object):
             keystroke = 'Ctrl+Z and [Enter]'
         if self.get_path():
             try:                    # "Intentionally" decrypting the original file
-                print '\nStory already exists! Appending to the current story...'
-                print '(filename hash: %s)' % self.get_hash()
-                self.decrypt(True)  # an easy workaround to modify your original story
+                self.decrypt(overwrite = True)  # an easy workaround to modify your original story
             except AssertionError:
                 print sess.error, "Bleh! Couldn't decrypt today's story! Check your password!"
                 return
+            print '\nStory already exists! Appending to the current story...'
+            print '(filename hash: %s)' % self.get_hash()
         data = [datetime.now().strftime('[%Y-%m-%d] %H:%M:%S\n')]
         try:
             stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
@@ -105,9 +110,11 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
         except (KeyboardInterrupt, EOFError):
             sleep(sess.capture_wait)
             print "\nAlright, let's save it for a later time then! Quitting..."
+            input_loop = False
             if self.get_path():
+                data = []
+            else:   # If the file doesn't exist (i.e., a new story), then add a reminder for the user
                 data.append('--- You were about to write something at this time? ---')
-                input_loop = False
         while input_loop:
             try:
                 stuff = raw_input('\t')     # auto-tabbing of paragraphs (for each [RETURN])
@@ -115,7 +122,8 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
             except (KeyboardInterrupt, EOFError):
                 sleep(sess.capture_wait)
                 break
-        self.write_data('\n\t'.join(data) + '\n\n', 'a')
+        if data:
+            self.write_data('\n\t'.join(data) + '\n\n', 'a')
         self.encrypt(echo = False)
         if input_loop and raw_input(sess.success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
             self.view()
@@ -123,21 +131,26 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
     def view(self, return_text = False):
         date_format = self.date.strftime('%B %d, %Y (%A)')
         try:
-            count, data = 0, self.decrypt()
+            stamp_count = 0
+            if self.get_path():
+                data = self.decrypt()
+            else:
+                print sess.error, "Story doesn't exist on the given day! (%s)" % self.date.date()
         except AssertionError:
             print sess.error, "Baaah! Couldn't decrypt the story!"
             return
         sess.clear_screen()
         split_data = data.split()
-        for word in split_data:     # Simple word counter (ignoring the timestamp)
-            if word not in punctuation:
+        for word in split_data:     # simple word counter (which ignores the timestamps)
+            if word.startswith('['):
+                print word
                 try:
                     timestamp = datetime.strptime(word, '[%Y-%m-%d]')
-                    count += 2          # "2" for both date and time
+                    stamp_count += 2        # "2" for both date and time
                 except ValueError:
                     pass
         start = "\nYour story from %s ...\n\n<----- START OF STORY -----> (%d words)\n\n"\
-                % (date_format, len(split_data) - count)
+                % (date_format, len(split_data) - stamp_count)
         end = "<----- END OF STORY ----->"
         if return_text:
             return (data, start, end)

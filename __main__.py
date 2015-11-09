@@ -9,8 +9,6 @@ load_list = ["core.py", "cipher.py", "options.py", "search.py"]
 map(execfile, map(lambda string: os.path.join(path, "src", string), load_list))
 _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
 
-# [Conventions used here]
-# file_tuple = (file_path, formatted_datetime) returned by hash_date()
 # data_tuple = (file_contents, key) returned by protect()
 # file_data = list(word_counts) for each file sorted by date, returned by the searching functions
 
@@ -47,8 +45,8 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
             choices = {     # how the option will be displayed, and its corresponding executable line
                 1: ("Write today's story", 'Story(session, "today").write()'),
                 2: ("Random story", 'random(session)'),
-                3: ("View the story of someday", 'view(session.key, hash_date(session.location))'),
-                4: ("Write (or append to) the story of someday", 'Story(session).write()'),
+                3: ("View the story of someday", 'Story(session).view()'),
+                4: ("Write (or append to) the story of someday", 'Story(session, is_write = True).write()'),
                 5: ("Search your stories", 'search(session)'),
                 6: ("Backup your stories", 'backup(session)'),
                 7: ("Change your password", 'change_pass(session)'),
@@ -69,6 +67,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 exec(choices[ch][1])
                 assert session.loop
                 session.loop = True if raw_input('\nDo something again (y/n)? ') == 'y' else False
+            # This only checks whether the `loop` value is modified - all other AssertionErrors are handled elsewhere
             except AssertionError:
                 break
             except (ValueError, KeyError):      # invalid input
@@ -78,7 +77,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 sleep(sess.capture_wait)
         except Exception as err:       # An uncaught exception (which has probably creeped all the way up here)
             try:
-                print sess.error, err, 'Ah, something bad has happened! Maybe try reconfiguring your diary?'
+                print sess.error, err, '\nAh, something bad has happened! Maybe try reconfiguring your diary?'
                 sleep(2)
             except (KeyboardInterrupt, EOFError):   # just to not quit while displaying
                 sleep(sess.capture_wait)

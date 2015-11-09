@@ -58,7 +58,8 @@ def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuf
     else:
         return data, key
 
-class SuppressOutput(object):    # solely to suprress the printing of a function
+class SuppressOutput(object):
+    '''A junk object used solely to suppress the printing of a function'''
     def write(self, arg):
         pass
 

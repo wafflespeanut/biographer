@@ -57,29 +57,39 @@ class Session(object):
 
     def delete_config_file(self):
         if os.path.exists(self.config_location):
-            print warning, 'Deleting configuration file...'
+            print warning, 'Deleting the configuration file...'
             os.remove(self.config_location)
             sleep(2)    # wait for the user to see the message (before it gets cleared)
 
-    def get_pass(self, key_hash = None):
+    def get_pass(self, key_hash = None, check_against = None, life_time = 'new'):
+        '''A method for getting passwords in three different situations'''
+        check_current_pass = True if key_hash or check_against else False
         while True:
-            if key_hash:    # If key_hash doesn't exist, then it's a "new password" scenario
-                self.key = getpass('\nEnter your password to continue: ')
-                if key_hash == hasher(sha256, self.key):
-                    break
-                print error, 'Wrong password!'
+            if check_current_pass:
+                self.key = getpass('\nEnter your current password to continue: ')
+                if key_hash:    # If key_hash doesn't exist, then it's a "new password" scenario
+                    if hasher(sha256, self.key) == key_hash:
+                        if not check_against:
+                            break
+                        else:   # so that we don't come back during the future password check
+                            check_current_pass = False
+                    else:
+                        print error, 'Wrong password!'
+                        continue
+            self.key = getpass("\nEnter your '%s' password: " % life_time)
+            if check_against and self.key == check_against:
+                print error, 'Both passwords are the same!'
+                continue
+            if len(self.key) < 8:
+                print warning, 'Password should be of at least 8 chars!'
+                continue
+            if getpass('Re-enter the %s password: ' % life_time) == self.key:
+                break
             else:
-                self.key = getpass('\nEnter your password: ')
-                if len(self.key) < 8:
-                    print warning, 'Choose a strong password! (at least 8 chars)'
-                    continue
-                if getpass('Re-enter the password: ') == self.key:
-                    break
-                else:
-                    print error, "Passwords don't match!"
+                print error, "Passwords don't match!"
 
-    # Configuration for authentication (well, you have to sign-in for each session!)
     def configure(self):
+        '''Configuration for authentication (of course, you have to sign-in for each session!)'''
         try:
             if os.path.exists(self.config_location):
                 print '\nConfiguration file found!'
@@ -88,15 +98,16 @@ class Session(object):
                 try:
                     key_hash, birth = config[0].rstrip('\n'), config[2].rstrip('\n')
                     self.location = config[1].rstrip(os.sep + '\n') + os.sep
-                    assert os.path.exists(self.location)
+                    assert os.path.exists(self.location)    # your first story should always exist!
                     self.birthday = datetime.strptime(birth, '%Y-%m-%d')
-                    # say, you've just created the config and gone for vacation!
+                    # say, you've just created the config file and gone for vacation!
                     if (datetime.now() - self.birthday).days not in range(3):
                         assert os.path.exists(self.location + Story(self, birth).get_hash())
                     self.get_pass(key_hash)
+                    assert Story(self, birth).decrypt()     # your password should decrypt the first story
                     self.loop = True
                 except (AssertionError, IndexError, ValueError):
-                    print 'Invalid configuration file!'
+                    print error, 'Invalid configuration file!'
                     self.reconfigure()
             else:
                 self.reconfigure()
@@ -105,9 +116,11 @@ class Session(object):
             print '\n', error, 'Failed to authenticate!'
             self.reset()
 
-    # This will come in handy because whenever we wanna rewrite the configuration file,
-    # we could just overwrite the object and call this function
     def write_to_config_file(self):
+        '''
+        This is handy whenever we wanna rewrite the configuration file,
+        because we could just overwrite the object and call this function
+        '''
         if os.path.exists(self.config_location) and os.path.getsize(self.config_location):
             msg = 'Configuration file has been updated!'
         else:
@@ -119,12 +132,13 @@ class Session(object):
         print success, msg
 
     def reconfigure(self):
-        self.delete_config_file()
-        clear_screen()
-        print "\nLet's start configuring your diary..."
-
+        '''Reset the diary'''
         try:
-            print '\nEnter the (absolute) location for your diary...' + \
+            self.reset()
+            self.delete_config_file()
+            clear_screen()
+            print "\nLet's start configuring your diary...\n" + \
+                  '\nEnter the location for your diary...' + \
                   "\n(Note that this will create a foler named 'Diary' if the path doesn't end with it)"
             self.location = os.path.expanduser(raw_input('\nPath: '))
             while not write_access(self.location):
@@ -143,9 +157,9 @@ class Session(object):
                                       \nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
                                       \nDate: ''')
                     if not birth:
-                        self.birthday = datetime.now()
+                        self.birthday, life_time = datetime.now(), 'new'
                     else:
-                        self.birthday = datetime.strptime(birth, '%Y-%m-%d')
+                        self.birthday, life_time = datetime.strptime(birth, '%Y-%m-%d'), 'old'
                         if not Story(self, birth).get_path():
                             print error, "A story doesn't exist on that day! (in the given path)"
                             continue
@@ -153,7 +167,14 @@ class Session(object):
                 except ValueError:
                     print error, 'Oops! Error in input. Try again...'
 
-            self.get_pass()
+            while True:
+                self.get_pass(life_time = life_time)
+                try:
+                    data = Story(self, self.birthday).decrypt()
+                    break
+                except AssertionError:
+                    print error, "Couldn't decrypt your 'first' story with the given password! Try again..."
+
             self.write_to_config_file()
             self.loop = True
             print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % self.config_location
@@ -164,7 +185,7 @@ class Session(object):
         except (KeyboardInterrupt, EOFError):
             sleep(capture_wait)
             if not all([self.location, self.key, self.birthday, self.loop]):
-                print error, "Failed to store the login credentials!"
+                print '\n', error, "Failed to store the login credentials!"
                 if os.path.exists(self.config_location):
                     os.remove(self.config_location)
                 self.reset()
