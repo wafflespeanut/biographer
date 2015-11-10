@@ -2,14 +2,15 @@
 
 - [x] Fix the flaws in the configuring, password changing and searching functions
 - [x] Improve the "grep" option and add a choice to ignore it
-- [ ] Timestamp at the start of the story compromises the cipher
+- [ ] <s>Timestamp at the start of the story compromises the cipher</s>
 - [ ] Improve the code structure using objects
 - [ ] Setup command-line options for writing, viewing and searching
+- [ ] Persuade the search functions to help with pretty printing
 - [ ] Update Rust library to change password
 
 ### Changelog
 
-<sup>The commits (before 0.4.0: Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat interesting & appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
+<sup>The commits before 0.4.0 (Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat interesting & appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
 **[v0.6.0]()**: *Biographer*
 - Rewrote the entire program using objects, thereby cleaning up *seven hells* of garbage code! (I've just realized that *readability* is more important compared to performance, as the latter can always be improved)

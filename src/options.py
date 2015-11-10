@@ -31,8 +31,9 @@ def mark_text(text, indices, length, color = 'R'):  # Mark text and return corre
         i += 1
     return ''.join(text), new_indices
 
-def date_iter(date_start, progress = True):     # tirelessly provide datetimes along with progress
-    total = (datetime.now() - date_start).days + 1      # including the last day
+# tirelessly provide datetimes along with optional progress
+def date_iter(date_start, date_end = datetime.now(), progress = True):
+    total = (date_end - date_start).days + 1      # include the final day
     for i in xrange(total):
         if progress:
             yield (date_start + timedelta(i), i + 1, total, int((float(i + 1) / total) * 100))
