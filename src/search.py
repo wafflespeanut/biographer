@@ -120,7 +120,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
             continue
         break
     delta = (d2 - d1).days
-    print '\nSearching %d stories...\n' % delta
+    print '\nSearching the past %d days...\n' % delta
 
     try:
         file_data = grab_stories(session.location, delta, d1)   # has both file location and the formatted datetime
@@ -150,7 +150,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 colored = []
                 numbered = str(i + 1) + '. ' + data[1]      # numbered datetime results
                 contents, _key = protect(results[i][0], 'd', session.key)
-                text, indices = mark_text(contents, data[2], jump)
+                text, indices = options.mark_text(contents, data[2], jump)
                 for idx in indices:
                     begin = find_nearest(text, idx, grep, -1)
                     end = find_nearest(text, idx, grep, 1)
@@ -173,10 +173,11 @@ def search(session, grep = 7):      # Invokes both the searching functions
             print numbered, spaces * ' ', '[ %s ]' % len(data[2])      # print only the datetime and counts in each file
 
     print '\n%s %sFound a total of %d occurrences in %d stories!%s\n' \
-           % (sess.success, fmt('Y'), total_count, num_stories, fmt())
-    print '  %sTime taken for searching: %s%s seconds!%s' % (fmt('B2'), fmt('G'), timing, fmt())
+           % (sess.success, options.fmt('Y'), total_count, num_stories, options.fmt())
+    print '  %sTime taken for searching: %s%s seconds!%s' % (options.fmt('B2'), options.fmt('G'), timing, options.fmt())
     if grep:
-        print '  %sTime taken for pretty printing: %s%s seconds!%s' % (fmt('B2'), fmt('G'), stop - start, fmt())
+        print '  %sTime taken for pretty printing: %s%s seconds!%s' \
+              % (options.fmt('B2'), options.fmt('G'), stop - start, options.fmt())
 
     while file_data:
         try:
@@ -185,6 +186,6 @@ def search(session, grep = 7):      # Invokes both the searching functions
             # I could've used the `protect()`, but I needed the number of display format (you know, DRY)
             file_tuple, indices = (results[ch - 1][0], results[ch - 1][1]), results[ch - 1][2]
             _key, (data, start, end) = view(session.key, file_tuple, True)
-            print start, mark_text(data, indices, jump, 'B1')[0], end
+            print start, options.mark_text(data, indices, jump, 'B1')[0], end
         except Exception:
             print sess.error, 'Oops! Bad input...'

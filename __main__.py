@@ -1,11 +1,12 @@
 import inspect, os, sys
 from src import session as sess
+from src import options
 from src.story import Story
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
 path = os.path.dirname(os.path.abspath(filename))
 
-load_list = ["core.py", "cipher.py", "options.py", "search.py"]
+load_list = ["core.py", "cipher.py", "search.py"]
 map(execfile, map(lambda string: os.path.join(path, "src", string), load_list))
 _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
 
@@ -44,12 +45,12 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
             print '\n\tWhat do you wanna do?\n'
             choices = {     # how the option will be displayed, and its corresponding executable line
                 1: ("Write today's story", 'Story(session, "today").write()'),
-                2: ("Random story", 'random(session)'),
+                2: ("Random story", 'options.random(session)'),
                 3: ("View the story of someday", 'Story(session).view()'),
                 4: ("Write (or append to) the story of someday", 'Story(session, is_write = True).write()'),
                 5: ("Search your stories", 'search(session)'),
-                6: ("Backup your stories", 'backup(session)'),
-                7: ("Change your password", 'change_pass(session)'),
+                6: ("Backup your stories", 'options.backup(session)'),
+                7: ("Change your password", 'options.change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
                 9: ("Encrypt a story", 'Story(session).encrypt()'),

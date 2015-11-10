@@ -1,10 +1,10 @@
-import shutil
+import os, sys, shutil
 from datetime import datetime, timedelta
 from hashlib import sha256
 from random import random as randgen, choice as rchoice
 
-from hashlib import sha256
-from src.story import hasher
+import session as sess
+from story import Story, hasher
 
 colors = { 'R': '91', 'G': '92', 'Y': '93', 'B2': '94', 'P': '95', 'B1': '96', 'W': '97', '0': '0', }
 
@@ -31,16 +31,27 @@ def mark_text(text, indices, length, color = 'R'):  # Mark text and return corre
         i += 1
     return ''.join(text), new_indices
 
+def date_iter(date_start, progress = True):     # tirelessly provide datetimes along with progress
+    total = (datetime.now() - date_start).days + 1      # including the last day
+    for i in xrange(total):
+        if progress:
+            yield (date_start + timedelta(i), i + 1, total, int((float(i + 1) / total) * 100))
+        else:
+            yield date_start + timedelta(i)
+
 def random(session):    # Useful only when you have a lot of stories (obviously)
-    num_stories = len(os.listdir(session.location))
-    if not num_stories:
+    num_days = (datetime.now() - session.birthday).days
+    num_files = len(os.listdir(session.location))
+    if not num_files:
         print sess.error, "There are no stories in the given location!"
         return
-    for i in range(10):
-        file_tuple = find_story(session.location, rchoice(range(num_stories)), session.birthday)
-        if file_tuple:
-            return view(session.key, file_tuple)
-    print '\nPerhaps, this may not be a valid path?'
+    for i in range(num_files):      # try to find a story
+        day = session.birthday + timedelta(rchoice(range(num_days)))
+        story = Story(session, day)
+        if story.get_path():
+            story.view()
+            return
+    print "\nPerhaps, you haven't written many stories?"
 
 def backup(session, backup_loc = None):
     if not backup_loc:
@@ -56,7 +67,7 @@ def change_pass(session):
     try:
         assert sess.write_access(session.location)
         print "\nLet's change your password..."
-        temp_name = str(randgen())[2:]
+        temp_name = 'BIOGRAPHER_' + str(randgen())[2:]
         temp_loc = os.path.join(os.path.dirname(session.location.rstrip(os.sep)), temp_name)
         session.get_pass(hasher(sha256, old_key), check_against = old_key)
         new_key = session.key[:]
@@ -76,9 +87,7 @@ def change_pass(session):
                 temp_loc = os.path.join(working_dir, temp_name)
 
         total = (datetime.now() - session.birthday).days + 1    # accounting the last day
-        for i in range(total):
-            day = session.birthday + timedelta(i)
-            progress = int((float(i + 1) / total) * 100)
+        for day, n, total, progress in date_iter(session.birthday):
             session.key = old_key
             story_old = Story(session, day)
             session.key = new_key
@@ -87,7 +96,7 @@ def change_pass(session):
                 try:
                     story_old.decrypt(overwrite = True)     # well, both are working on the same file really!
                     story_new.encrypt(echo = False)
-                    sys.stdout.write('\r  Processing files... %d%s (%d/%d days)' % (progress, '%', i + 1, total))
+                    sys.stdout.write('\r  Processing files... %d%s (%d/%d days)' % (progress, '%', n, total))
                     sys.stdout.flush()
                 except AssertionError:
                     print sess.error, "This file couldn't be decrypted! (filename hash: %s)\

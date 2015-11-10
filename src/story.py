@@ -143,7 +143,6 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
         split_data = data.split()
         for word in split_data:     # simple word counter (which ignores the timestamps)
             if word.startswith('['):
-                print word
                 try:
                     timestamp = datetime.strptime(word, '[%Y-%m-%d]')
                     stamp_count += 2        # "2" for both date and time

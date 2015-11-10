@@ -58,27 +58,6 @@ def protect(path, mode, key):       # Invokes the cipher to encrypt/decrypt stuf
     else:
         return data, key
 
-class SuppressOutput(object):
-    '''A junk object used solely to suppress the printing of a function'''
-    def write(self, arg):
-        pass
-
-def try_encrypt(key, file_tuple, encrypt = True):
-    if not file_tuple:
-        return
-    file_path = file_tuple[0]
-    if encrypt:
-        old_stdout, sys.stdout = sys.stdout, SuppressOutput()
-        data = protect(file_path, 'd', key)     # this function's output has been suppressed
-        sys.stdout = old_stdout
-        if data:    # just to check whether a file has already been encrypted
-            print sess.error, "This file looks like it's already been encrypted.", \
-                         "\nIt's never encouraged to use this algorithm for encryption more than once!"
-        else:
-            protect(file_path, 'e', key)
-            print sess.success, 'Successfully encrypted the file! (%s)' % file_path
-    return
-
 def view(key, file_tuple, return_text = False):      # Decrypts and prints the story on the screen
     if type(file_tuple) is tuple:                    # also returns the text on request
         data_tuple = protect(file_tuple[0], 'd', key)
