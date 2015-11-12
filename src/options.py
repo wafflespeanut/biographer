@@ -6,31 +6,6 @@ from random import random as randgen, choice as rchoice
 import session as sess
 from story import Story, hasher
 
-colors = { 'R': '91', 'G': '92', 'Y': '93', 'B2': '94', 'P': '95', 'B1': '96', 'W': '97', '0': '0', }
-
-def fmt(color = '0'):
-    return {'win32': ''}.get(sys.platform, '\033[' + colors[color] + 'm')
-
-def mark_text(text, indices, length, color = 'R'):  # Mark text and return corrected indices
-    text = list(text)
-    if sys.platform == 'win32':         # Damn OS doesn't even support coloring
-        return text, indices
-    formatter = fmt(color), fmt()
-    lengths = map(len, formatter)
-    i, limit = 0, len(indices)
-    new_indices = indices[:]
-    while i < limit:
-        idx = indices[i]
-        text[idx] = formatter[0] + text[idx]
-        text[idx + length - 1] += formatter[1]
-        new_indices[i] -= lengths[0]
-        j = i
-        while j < limit:
-            new_indices[j] += sum(lengths)
-            j += 1
-        i += 1
-    return ''.join(text), new_indices
-
 # tirelessly provide datetimes along with optional progress
 def date_iter(date_start, date_end = datetime.now(), progress = True):
     total = (date_end - date_start).days + 1      # include the final day

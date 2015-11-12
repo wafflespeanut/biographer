@@ -2,34 +2,20 @@ import ctypes
 from datetime import datetime, timedelta
 from timeit import default_timer as timer
 
+import session as sess
+from options import date_iter
+from story import Story
+
 prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
 rust_lib = os.path.join(path, 'target', 'release', prefix + 'biographer' + ext)    # Library location (relative)
-# And, you'll be needing the Nightly rust, because the library depends on a future method and a deprecated method
-
-# Finds the file name using the timedelta from the birth of the diary to a specified date
-def find_story(location, delta, date_start):
-    stories = len(os.listdir(location))
-    date = date_start + timedelta(days = delta)
-    file_tuple = hash_date(location, date.year, date.month, date.day)
-    return file_tuple
-
-# Grabs the absolute paths of stories for a given datetime and timedelta objects
-def grab_stories(location, delta, date):
-    file_data = [], []
-    for i in range(delta):
-        file_tuple = find_story(location, i, date)
-        if not file_tuple: continue
-        file_data[0].append(file_tuple[0])
-        file_data[1].append(file_tuple[1])
-    return file_data
 
 # Exhaustive process (that's why I've written a Rust library for this!)
 # The library accelerates this search by about ~100 times!
 def py_search(session, date_start, date_end, word):
     occurrences, errors, no_stories = [], 0, 0
     start = timer()
-    for day, n, total, progress in options.date_iter(date_start, date_end):
+    for day, n, total, progress in date_iter(date_start, date_end):
         occurred, story = [], Story(session, day)
         try:
             if not story.get_path():
@@ -56,9 +42,11 @@ def py_search(session, date_start, date_end, word):
     assert no_stories < total
     return occurrences, (timer() - start)
 
+# You'll be needing the Nightly rust for compiling the library
+# because the library depends on a future method and a deprecated method
 def rusty_search(session, date_start, date_end, word):      # FFI for giving the searching job to Rust
     path_list = []
-    for day, n, total, progress in options.date_iter(date_start, date_end):
+    for day, n, total, progress in date_iter(date_start, date_end):
         file_path = Story(session, day).get_path()
         if file_path:
             path_list.append(file_path)
@@ -101,8 +89,29 @@ def find_line_boundary(text, idx, limit, direction_value):  # find the closest b
         i += direction_value
     return i
 
+def mark_text(text, indices, length, color = 'R'):  # Mark text and return corrected indices
+    text = list(text)
+    if sys.platform == 'win32':         # Damn OS doesn't even support coloring
+        return text, indices
+    formatter = sess.fmt(color), sess.fmt()
+    lengths = map(len, formatter)
+    i, limit = 0, len(indices)
+    new_indices = indices[:]
+    while i < limit:
+        idx = indices[i]
+        text[idx] = formatter[0] + text[idx]
+        text[idx + length - 1] += formatter[1]
+        new_indices[i] -= lengths[0]
+        j = i
+        while j < limit:
+            new_indices[j] += sum(lengths)
+            j += 1
+        i += 1
+    return ''.join(text), new_indices
+
 def search(session, grep = 7):      # Invokes both the searching functions
     sess.clear_screen()
+    # Phase 1: Get the user input required for searching through the stories
     word = raw_input("\nEnter a word: ")
     while True:
         choices = ('Search everything! (Python)',
@@ -132,11 +141,11 @@ def search(session, grep = 7):      # Invokes both the searching functions
             print sess.error, 'Oops! Error in input. Try again...'
             continue
         break
+
+    # Phase 2: Send the datetimes to the respective searching functions
     delta = (d2 - d1).days
     print '\nSearching the past %d days...\n' % (delta + 1)
-
     try:
-        file_data = grab_stories(session.location, delta, d1)   # has both file location and the formatted datetime
         if choice in (1, 2):
             occurrences, timing = py_search(session, d1, d2, word)
         else:
@@ -145,6 +154,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
         print sess.error, 'There are no stories in the given location!'
         return
 
+    # Phase 3: Print the results (in a pretty or ugly way) using the giant function below
     jump, num_stories = len(word), len(occurrences)
     total_count = sum(map(lambda stuff: stuff[1], occurrences))
     print sess.success, 'Done! Time taken: %s seconds! (%d occurrences in %d stories!)' \
@@ -152,6 +162,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
     if not total_count:
         print sess.error, "Bummer! There are no stories containing '%s'..." % word
         return
+    print_stuff(grep)
 
     def print_stuff(grep):
         results_begin = '\nSearch results from {} to {}:'.format(d1.strftime('%B %d, %Y'), d2.strftime('%B %d, %Y')) + \
@@ -165,7 +176,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
                     date = session.birthday + timedelta(n)
                     content = Story(session, date).decrypt()
                     numbers = str(i + 1) + '. ' + date.strftime('%B %d, %Y (%A)')
-                    text, indices = options.mark_text(content, indices, jump)   # precisely indicate the word in text
+                    text, indices = mark_text(content, indices, jump)   # precisely indicate the word in text
                     for idx in indices:     # find the word occurrences
                         begin = find_line_boundary(text, idx, grep, -1)
                         end = find_line_boundary(text, idx, grep, 1)
@@ -175,7 +186,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 stop = timer()
             except (KeyboardInterrupt, EOFError):
                 sleep(sess.capture_wait)
-                grep = 0
+                grep = 0    # default back to ugly printing
                 sess.clear_screen()
                 print "\n Yep, it takes time! Let's go back to the good ol' days...\n"
 
@@ -188,14 +199,14 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 print numbers, ' ' * spaces, '[ %s ]' % word_count  # print only the datetime and counts in each file
 
         print '\n%s %sFound a total of %d occurrences in %d stories!%s\n' % \
-              (sess.success, options.fmt('Y'), total_count, num_stories, options.fmt())
+              (sess.success, sess.fmt('Y'), total_count, num_stories, sess.fmt())
         print '  %sTime taken for searching: %s%s seconds!%s' % \
-              (options.fmt('B2'), options.fmt('G'), timing, options.fmt())
+              (sess.fmt('B2'), sess.fmt('G'), timing, sess.fmt())
         if grep:
             print '  %sTime taken for pretty printing: %s%s seconds!%s' \
-                  % (options.fmt('B2'), options.fmt('G'), stop - start, options.fmt())
+                  % (sess.fmt('B2'), sess.fmt('G'), stop - start, sess.fmt())
 
-    print_stuff(grep)
+    # Phase 4: Get the user input and display the stories
     while occurrences:
         try:
             print '\nEnter a number to see the corresponding story...'
@@ -213,6 +224,6 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 n_day, word_count, indices = occurrences[int(ch) - 1]
                 date = session.birthday + timedelta(n_day)
                 (data, start, end) = Story(session, date).view(return_text = True)
-                print start, options.mark_text(data, indices, jump, 'B1')[0], end
+                print start, mark_text(data, indices, jump, 'B1')[0], end
         except (ValueError, IndexError):
             print sess.error, 'Oops! Bad input...'

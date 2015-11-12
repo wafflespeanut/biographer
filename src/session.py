@@ -11,6 +11,11 @@ newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r
 capture_wait = (0.1 if sys.platform == 'win32' else 0)
 # the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
 
+colors = { 'R': '91', 'G': '92', 'Y': '93', 'B2': '94', 'P': '95', 'B1': '96', 'W': '97', '0': '0', }
+
+def fmt(color = '0'):
+    return {'win32': ''}.get(sys.platform, '\033[' + colors[color] + 'm')
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
