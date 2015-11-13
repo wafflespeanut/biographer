@@ -1,4 +1,4 @@
-import os, sys
+import inspect, os, sys
 from datetime import datetime
 from getpass import getpass
 from hashlib import sha256
@@ -6,18 +6,30 @@ from time import sleep
 
 from story import Story, hasher
 
-error, warning, success = "\n[ERROR]", "\n[WARNING]", "\n[SUCCESS]"
-newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
-capture_wait = (0.1 if sys.platform == 'win32' else 0)
-# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
+formats = {
+    'black': 90, 'red': 91, 'green': 92, 'yellow': 93, 'blue': 94, 'violet': 95, 'skyblue': 96, 'white': 97,
+    'null': 0, 'bold': 1, 'italic': 3, 'underline': 4, 'strike': 9 }
 
-colors = { 'R': '91', 'G': '92', 'Y': '93', 'B2': '94', 'P': '95', 'B1': '96', 'W': '97', '0': '0', }
+def fmt(color = 'null', dark = False):
+    format_code = formats[color] - 60 if dark else formats[color]
+    return {'win32': ''}.get(sys.platform, '\033[' + str(format_code) + 'm')
 
-def fmt(color = '0'):
-    return {'win32': ''}.get(sys.platform, '\033[' + colors[color] + 'm')
+def format_text(text, formatting, dark = False):
+    return fmt(formatting, dark) + text + fmt()
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
+
+filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
+path = os.path.dirname(os.path.abspath(filename))
+
+error, warning, success = map(lambda s: '\n' + format_text(s, 'bold'),
+                              (format_text('[ERROR]', 'red'),
+                               format_text('[WARNING]', 'yellow', True),
+                               format_text('[SUCCESS]', 'green')))
+newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
+capture_wait = (0.1 if sys.platform == 'win32' else 0)
+# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
 
 def write_access(path):
     if not os.access(path, os.W_OK):
@@ -137,7 +149,7 @@ class Session(object):
         print success, msg
 
     def reconfigure(self):
-        '''Reset the diary'''
+        '''Reset the diary's configuration'''
         try:
             self.reset()
             self.delete_config_file()
@@ -184,7 +196,7 @@ class Session(object):
             self.loop = True
             print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % self.config_location
             print "And, be careful with that, because invalid configuration files will be deleted during startup!"
-            sleep(3)
+            sleep(2)
             raw_input('\nPress [Enter] to continue...')
 
         except (KeyboardInterrupt, EOFError):

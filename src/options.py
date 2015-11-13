@@ -2,6 +2,7 @@ import os, sys, shutil
 from datetime import datetime, timedelta
 from hashlib import sha256
 from random import random as randgen, choice as rchoice
+from time import sleep
 
 import session as sess
 from story import Story, hasher
@@ -30,11 +31,17 @@ def random(session):    # Useful only when you have a lot of stories (obviously)
     print "\nPerhaps, you haven't written many stories?"
 
 def backup(session, backup_loc = None):
-    if not backup_loc:
-        print '\nBacking up to Desktop...'
-        backup_loc = '~/Desktop'
-    abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%Y-%m-%d})'))
-    shutil.make_archive(abs_path, 'zip', session.location)
+    try:
+        if not backup_loc:
+            print '\nBacking up to Desktop...'
+            backup_loc = '~/Desktop'
+        abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%Y-%m-%d)'))
+        shutil.make_archive(abs_path, 'zip', session.location)
+    except (KeyboardInterrupt, EOFError):
+        sleep(sess.capture_wait)
+        print sess.error, 'Interrupted!'
+        if os.path.exists(abs_path + '.zip'):
+            os.remove(abs_path + '.zip')
 
 def change_pass(session):
     sess.clear_screen()

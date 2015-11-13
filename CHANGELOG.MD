@@ -2,9 +2,9 @@
 
 - [x] Fix the flaws in the configuring, password changing and searching functions
 - [x] Improve the "grep" option and add a choice to ignore it
-- [ ] <s>Timestamp at the start of the story compromises the cipher</s>
-- [ ] Improve the code structure using objects
+- [x] Improve the code structure using objects
 - [ ] Setup command-line options for writing, viewing and searching
+- [ ] Timestamp at the start of every story could compromise the cipher!
 - [ ] Persuade the search functions to help with pretty printing
 - [ ] Update Rust library to change password
 
@@ -12,10 +12,13 @@
 
 <sup>The commits before 0.4.0 (Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat interesting & appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
+**[v0.6.1]()**: *Biographer*
+- Added command-line options for everything - which means you can now invoke writing, viewing, searching or whatever you wanna do, just by passing those as another argument!
+
 **[v0.6.0]()**: *Biographer*
 - Rewrote the entire program using objects, thereby cleaning up *seven hells* of garbage code! (I've just realized that *readability* is more important compared to performance, as the latter can always be improved)
 - Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
-- Fixed the cipher algorithm which has reduced the time taken by Python for searching (but, a recent deprecation in the standard Rust library has brought our searching time down - now, it's only ~100 times faster than Python)
+- Fixed the cipher algorithm which has reduced Python's time for searching (but, a recent deprecation in the standard Rust library has brought its searching time down - now, it's only ~100 times faster than Python)
 - Added an option for printing search results in both ugly and pretty ways
 
 **[v0.5.1](https://github.com/Wafflespeanut/biographer/tree/7bdbf77879bd4e33544f9d13aaaf3ecda35ab054)**: *Biographer*

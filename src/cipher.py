@@ -41,7 +41,7 @@ def zombify(mode, data, key):           # Linking helper function (it can encryp
     if mode == 'e':
         text = CBC('e', ''.join(hexed(data)))
         return CXOR(shift(text, ch), key)   # CBC encode, shift and XOR
-    elif mode in ('d', 'w'):
+    elif mode == 'd':
         try:
             text = shift(CXOR(data, key), 256 - ch)
             return char(CBC('d', text))     # do the reverse

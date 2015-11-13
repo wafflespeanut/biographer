@@ -1,11 +1,10 @@
-import inspect, os, sys
+import sys
+from time import sleep
+
 from src import session as sess
 from src.options import random, backup, change_pass
 from src.story import Story
 from src.search import search
-
-filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
-path = os.path.dirname(os.path.abspath(filename))
 
 _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
 
@@ -50,9 +49,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
                 9: ("Encrypt a story", 'Story(session).encrypt()'),
-                0: ("Exit the biographer", ''),
-            }
-
+                0: ("Exit the biographer", '') }
             for i in range(1, len(choices) - 1) + [0]:
                 print '\t\t%d. %s' % (i, choices[i][0])
 

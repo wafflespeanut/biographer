@@ -1,5 +1,6 @@
-import ctypes
+import os, sys, ctypes
 from datetime import datetime, timedelta
+from time import sleep
 from timeit import default_timer as timer
 
 import session as sess
@@ -8,7 +9,7 @@ from story import Story
 
 prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
-rust_lib = os.path.join(path, 'target', 'release', prefix + 'biographer' + ext)    # Library location (relative)
+rust_lib = os.path.join(os.path.dirname(sess.path), 'target', 'release', prefix + 'biographer' + ext)
 
 # Exhaustive process (that's why I've written a Rust library for this!)
 # The library accelerates this search by about ~100 times!
@@ -89,12 +90,12 @@ def find_line_boundary(text, idx, limit, direction_value):  # find the closest b
         i += direction_value
     return i
 
-def mark_text(text, indices, length, color = 'R'):  # Mark text and return corrected indices
+def mark_text(text, indices, length, color = 'red'):    # Mark text and return corrected indices
     text = list(text)
     if sys.platform == 'win32':         # Damn OS doesn't even support coloring
         return text, indices
     formatter = sess.fmt(color), sess.fmt()
-    lengths = map(len, formatter)
+    lengths = map(len, formatter)       # We gotta update the indices when we introduce colored text
     i, limit = 0, len(indices)
     new_indices = indices[:]
     while i < limit:
@@ -111,6 +112,7 @@ def mark_text(text, indices, length, color = 'R'):  # Mark text and return corre
 
 def search(session, grep = 7):      # Invokes both the searching functions
     sess.clear_screen()
+    now = datetime.now()
     # Phase 1: Get the user input required for searching through the stories
     word = raw_input("\nEnter a word: ")
     while True:
@@ -129,22 +131,28 @@ def search(session, grep = 7):      # Invokes both the searching functions
             print sess.error, 'Invalid choice!'
     if choice == 1 or (choice == 3 and len(choices) > 2):
         d1 = session.birthday
-        d2 = datetime.now()
+        d2 = now
     while choice == 2:
         try:
             print '\nEnter dates in the form YYYY-MM-DD (Mind you, with hyphen!)'
+            lower_bound = session.birthday
             d1 = datetime.strptime(raw_input('Start date: '), '%Y-%m-%d')
+            assert d1 >= lower_bound and  d1 <= now
+            lower_bound = d1
             d2 = raw_input("End date (Press [Enter] for today's date): ")
-            if not d2: d2 = datetime.now()
-            else: d2 = datetime.strptime(d2, '%Y-%m-%d')
+            d2 = datetime.strptime(d2, '%Y-%m-%d') if d2 else now
+            assert d2 > lower_bound and d2 <= now
+        except AssertionError:
+            print sess.error, 'Please enter a date after %s and before %s' % \
+                              (lower_bound.strftime('%b. %d, %Y'), now.strftime('%b. %d, %Y'))
+            continue
         except ValueError:
             print sess.error, 'Oops! Error in input. Try again...'
             continue
         break
 
     # Phase 2: Send the datetimes to the respective searching functions
-    delta = (d2 - d1).days
-    print '\nSearching the past %d days...\n' % (delta + 1)
+    print "\nSearching your stories for the word '%s'...\n" % word
     try:
         if choice in (1, 2):
             occurrences, timing = py_search(session, d1, d2, word)
@@ -154,18 +162,8 @@ def search(session, grep = 7):      # Invokes both the searching functions
         print sess.error, 'There are no stories in the given location!'
         return
 
-    # Phase 3: Print the results (in a pretty or ugly way) using the giant function below
-    jump, num_stories = len(word), len(occurrences)
-    total_count = sum(map(lambda stuff: stuff[1], occurrences))
-    print sess.success, 'Done! Time taken: %s seconds! (%d occurrences in %d stories!)' \
-                   % (timing, total_count, num_stories)
-    if not total_count:
-        print sess.error, "Bummer! There are no stories containing '%s'..." % word
-        return
-    print_stuff(grep)
-
-    def print_stuff(grep):
-        results_begin = '\nSearch results from {} to {}:'.format(d1.strftime('%B %d, %Y'), d2.strftime('%B %d, %Y')) + \
+    def print_stuff(grep):      # function to choose between pretty and ugly printing
+        results_begin = '\nSearch results from %s to %s:' % (d1.strftime('%B %d, %Y'), d2.strftime('%B %d, %Y')) + \
                         "\n\nStories on these days have the word '%s' in them...\n" % word
         if grep:    # pretty printing the output (at the cost of decrypting time)
             try:
@@ -173,7 +171,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 print results_begin
                 for i, (n, word_count, indices) in enumerate(occurrences):
                     colored = []
-                    date = session.birthday + timedelta(n)
+                    date = d1 + timedelta(n)
                     content = Story(session, date).decrypt()
                     numbers = str(i + 1) + '. ' + date.strftime('%B %d, %Y (%A)')
                     text, indices = mark_text(content, indices, jump)   # precisely indicate the word in text
@@ -188,7 +186,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 sleep(sess.capture_wait)
                 grep = 0    # default back to ugly printing
                 sess.clear_screen()
-                print "\n Yep, it takes time! Let's go back to the good ol' days...\n"
+                print "Yep, it takes time! Let's go back to the good ol' days..."
 
         if not grep:    # Yuck, but cleaner way to print the results
             print results_begin
@@ -199,12 +197,22 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 print numbers, ' ' * spaces, '[ %s ]' % word_count  # print only the datetime and counts in each file
 
         print '\n%s %sFound a total of %d occurrences in %d stories!%s\n' % \
-              (sess.success, sess.fmt('Y'), total_count, num_stories, sess.fmt())
+              (sess.success, sess.fmt('yellow'), total_count, num_stories, sess.fmt())
         print '  %sTime taken for searching: %s%s seconds!%s' % \
-              (sess.fmt('B2'), sess.fmt('G'), timing, sess.fmt())
+              (sess.fmt('blue'), sess.fmt('green'), timing, sess.fmt())
         if grep:
             print '  %sTime taken for pretty printing: %s%s seconds!%s' \
-                  % (sess.fmt('B2'), sess.fmt('G'), stop - start, sess.fmt())
+                  % (sess.fmt('blue'), sess.fmt('green'), stop - start, sess.fmt())
+
+    # Phase 3: Print the results (in a pretty or ugly way) using the giant function below
+    jump, num_stories = len(word), len(occurrences)
+    total_count = sum(map(lambda stuff: stuff[1], occurrences))
+    print sess.success, 'Done! Time taken: %s seconds! (%d occurrences in %d stories!)' \
+                   % (timing, total_count, num_stories)
+    if not total_count:
+        print sess.error, "Bummer! There are no stories containing '%s'..." % word
+        return
+    print_stuff(grep)
 
     # Phase 4: Get the user input and display the stories
     while occurrences:
@@ -222,8 +230,8 @@ def search(session, grep = 7):      # Invokes both the searching functions
                 return
             else:
                 n_day, word_count, indices = occurrences[int(ch) - 1]
-                date = session.birthday + timedelta(n_day)
+                date = d1 + timedelta(n_day)
                 (data, start, end) = Story(session, date).view(return_text = True)
-                print start, mark_text(data, indices, jump, 'B1')[0], end
+                print start, mark_text(data, indices, jump, 'skyblue')[0], end
         except (ValueError, IndexError):
             print sess.error, 'Oops! Bad input...'
