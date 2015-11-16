@@ -43,7 +43,7 @@ def backup(session, backup_loc = None):
         if os.path.exists(abs_path + '.zip'):
             os.remove(abs_path + '.zip')
 
-def change_pass(session):
+def change_pass(session, is_arg = False):
     sess.clear_screen()
     old_key, old_loc = session.key[:], session.location[:]
 
@@ -52,7 +52,9 @@ def change_pass(session):
         print "\nLet's change your password..."
         temp_name = 'BIOGRAPHER_' + str(randgen())[2:]
         temp_loc = os.path.join(os.path.dirname(session.location.rstrip(os.sep)), temp_name)
-        session.get_pass(hasher(sha256, old_key), check_against = old_key)
+        # If we're changing the password through command, then there's no reason for asking the existing one twice!
+        key_hash = None if is_arg else hasher(sha256, old_key)
+        session.get_pass(key_hash, check_against = old_key)
         new_key = session.key[:]
         while True:
             try:
@@ -75,16 +77,16 @@ def change_pass(session):
             story_old = Story(session, day)
             session.key = new_key
             story_new = Story(session, day)
-            if story_old.get_path():
-                try:
+            try:
+                if story_old.get_path():
                     story_old.decrypt(overwrite = True)     # well, both are working on the same file really!
                     story_new.encrypt(echo = False)
-                    sys.stdout.write('\r  Processing files... %d%s (%d/%d days)' % (progress, '%', n, total))
-                    sys.stdout.flush()
-                except AssertionError:
-                    print sess.error, "This file couldn't be decrypted! (filename hash: %s)\
-                                       \nResolve it before changing the password again..." % story_old.get_hash()
-                    raise AssertionError
+                sys.stdout.write('\r  Processing files... %d%s (%d/%d days)' % (progress, '%', n, total))
+                sys.stdout.flush()
+            except AssertionError:
+                print sess.error, "This file couldn't be decrypted! (filename hash: %s)\
+                                   \nResolve it before changing the password again..." % story_old.get_hash()
+                raise AssertionError
 
     except (AssertionError, KeyboardInterrupt, EOFError):
         session.key, session.location = old_key, old_loc

@@ -2,37 +2,17 @@ import sys
 from time import sleep
 
 from src import session as sess
+from src.args import analyse_args
 from src.options import random, backup, change_pass
-from src.story import Story
 from src.search import search
+from src.story import Story
 
-_name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
 
-def chain_args(args):
-    try:
-        option, value = args[0].split('=')
-    except ValueError:
-        option = args[0]
-    # CHECKLIST
-    return None
+if __name__ == '__main__':
+    _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
+    session = analyse_args(args)
 
-if __name__ == '__main__':  # there are a hell lot of `try...except`s for smoother experience
-    session = sess.Session()
-    if session.loop:
-        sess.clear_screen()
-
-    try:
-        if args and session.loop:
-            option = chain_args(args)
-            if option:
-                exec(option)        # `exec` is a nice hack to achieve wonderful things in Python
-                exit('\n')
-            print sess.error, 'Invalid arguments! Continuing with default...'
-    except (KeyboardInterrupt, EOFError):
-        sleep(sess.capture_wait)
-        exit('\n')
-
-    while session.loop:     # Main loop
+    while session.loop:     # Main loop (there are a hell lot of `try...except`s for smoother experience)
         try:
             print '\n\t(Press Ctrl-C to get back to the main menu any time!)'
             if 'linux' not in sys.platform:
@@ -58,7 +38,7 @@ if __name__ == '__main__':  # there are a hell lot of `try...except`s for smooth
                 if ch == 0:
                     session.loop = False
                     break
-                exec(choices[ch][1])
+                exec(choices[ch][1])    # `exec` is a nice hack to achieve wonderful things in Python
                 assert session.loop
                 session.loop = True if raw_input('\nDo something again (y/n)? ') == 'y' else False
             # This only checks whether the `loop` value is modified - all other AssertionErrors are handled elsewhere

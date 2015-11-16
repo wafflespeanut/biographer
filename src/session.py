@@ -45,7 +45,7 @@ class Session(object):
     The 'Session' object has all the information required to carry out the entire session.
     It has the location of the config file, your diary's location, and your password (among other things)
     '''
-    def __init__(self):
+    def __init__(self, is_bare = False):
         self.reset()
         path = os.path.expanduser('~')
         try:    # QPython (Android) uses `/data` as home directory, and so let's try with `/mnt/sdcard`
@@ -66,6 +66,8 @@ class Session(object):
                 raw_input('\nPress [Enter] to continue...')
         except KeyboardInterrupt:
             pass
+        if is_bare:     # A bare session for doing those stuff which don't require a password (`help` or `configure`)
+            return
         if os.access(path, os.W_OK):
             self.configure()
 
@@ -80,7 +82,7 @@ class Session(object):
 
     def get_pass(self, key_hash = None, check_against = None, life_time = 'new'):
         '''A method for getting passwords in three different situations'''
-        check_current_pass = True if key_hash or check_against else False
+        check_current_pass = True if key_hash else False
         while True:
             if check_current_pass:
                 self.key = getpass('\nEnter your current password to continue: ')
