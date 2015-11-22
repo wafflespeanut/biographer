@@ -34,13 +34,16 @@ class Story(object):
     tell whether it should be encrypted or decrypted, whether it's new, etc.
     '''
     def __init__(self, session, when = None, is_write = False):
-        if when == 'today' or when == 'now':
-            self.date = datetime.now()
-        elif type(when) is str:
-            self.date = datetime.strptime(when, '%Y-%m-%d')
-        elif type(when) is datetime:
-            self.date = when
-        else:
+        try:
+            if when == 'today' or when == 'now':
+                self.date = datetime.now()
+            elif type(when) is str:
+                self.date = datetime.strptime(when, '%Y-%m-%d')
+            elif type(when) is datetime:
+                self.date = when
+            else:
+                raise ValueError
+        except ValueError:
             self.date = get_date()
         # just in case if you plan to write your past days beyond the birthday
         if is_write and self.date < session.birthday:   # you wouldn't want this when you're viewing!

@@ -3,7 +3,7 @@
 - [x] Fix the flaws in the configuring, password changing and searching functions
 - [x] Improve the "grep" option and add a choice to ignore it
 - [x] Improve the code structure using objects
-- [ ] Setup command-line options for writing, viewing and searching
+- [x] Setup command-line options for writing, viewing and searching
 - [ ] Timestamp at the start of every story could compromise the cipher!
 - [ ] Persuade the search functions to help with pretty printing
 - [ ] Update Rust library to change password
@@ -12,10 +12,10 @@
 
 <sup>The commits before 0.4.0 (Memento) are in the [`scripts`](https://github.com/Wafflespeanut/scripts) repository. I moved it here once the diary became somewhat interesting & appealing. In case you wanna check those out, I've provided the links for each version below.</sup>
 
-**[v0.6.1]()**: *Biographer*
+**v0.6.1**: *Biographer*
 - Added command-line options for everything - which means you can now invoke writing, viewing, searching or whatever you wanna do, just by passing those as another argument!
 
-**[v0.6.0]()**: *Biographer*
+**[v0.6.0](https://github.com/Wafflespeanut/biographer/tree/a54890617ac070344d62e3ea75d17c80c121bccd)**: *Biographer*
 - Rewrote the entire program using objects, thereby cleaning up *seven hells* of garbage code! (I've just realized that *readability* is more important compared to performance, as the latter can always be improved)
 - Fixed a number of flaws that had popped up in recent versions (especially while changing the password)
 - Fixed the cipher algorithm which has reduced Python's time for searching (but, a recent deprecation in the standard Rust library has brought its searching time down - now, it's only ~100 times faster than Python)

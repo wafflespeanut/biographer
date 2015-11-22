@@ -1,4 +1,4 @@
-## Biographer (v0.6.0)
+## Biographer (v0.6.1)
 
 This is a little project of mine - a command-line utility to remember everyday memories.
 
@@ -21,9 +21,10 @@ Regarding cross-platforms, I've tested it on Windows 8 and Ubuntu, but I'm not s
 - Clone the repo (or download the zip). **Note that you'll need Python first!**
 - It'd be best if you have `python` in your path environment variable. You can just execute `python /path/to/biographer`.
 - If you're really interested in using the Rust library for searching (which is gonna be useful only if you have some appreciable amount of stories already), then download the [nightly version of Rust](http://www.rust-lang.org/install.html) (v1.5.0), `cd` into the folder and run `cargo build --release` and make sure that you're compiling from and for the right architecture (i.e., 32-bit Rust for 32-bit Python)
+- It supports all the options in command-line, if you wanna do everything in the fly! Try running `python /path/to/biographer --help`
 
-### Usage
+### Note on usage
 
-**The script runs best on Linux terminal** (by which I mean the display, speed, and specifically `KeyboardInterrupt`, which is necessary for navigation throughout the program). Running on IDEs isn't recommended as they may echo your password (IDLE does that), and so [do it at your own risk!](https://en.wikipedia.org/wiki/Shoulder_surfing_%28computer_security%29)
+**The script runs best on Linux terminal** (by which I mean the display, speed, and specifically `KeyboardInterrupt`, which is necessary for navigation throughout the program). Running on IDEs isn't recommended as they may echo your password (even IDLE does that), and so [do it at your own risk!](https://en.wikipedia.org/wiki/Shoulder_surfing_%28computer_security%29)
 
-As for Windows users, since your command prompts *suck*, things are quite *weird* for you. For example, when you're about to write in the command prompt, the usual `KeyboardInterrupt` with <kbd>Ctrl</kbd>+<kbd>C</kbd> almost always terminates the program. So, I had to make use of `EOFError` to work around it, which means you have to use <kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Enter</kbd> instead of <kbd>Ctrl</kbd>+<kbd>C</kbd> once you've finished writing.
+As for Windows users, since your command prompt *sucks*, things are quite *weird* for you. For example, when you're about to write in the command prompt, the usual `KeyboardInterrupt` with <kbd>Ctrl</kbd>+<kbd>C</kbd> almost always terminates the program (as they're being *asynchronous*). So, I had to make use of `EOFError` to work around it, which means you have to use <kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Enter</kbd> instead of <kbd>Ctrl</kbd>+<kbd>C</kbd> once you've finished writing.

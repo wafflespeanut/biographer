@@ -91,9 +91,9 @@ def find_line_boundary(text, idx, limit, direction_value):  # find the closest b
     return i
 
 def mark_text(text, indices, length, color = 'red'):    # Mark text and return corrected indices
-    text = list(text)
     if sys.platform == 'win32':         # Damn OS doesn't even support coloring
         return text, indices
+    text = list(text)
     formatter = sess.fmt(color), sess.fmt()
     lengths = map(len, formatter)       # We gotta update the indices when we introduce colored text
     i, limit = 0, len(indices)
@@ -110,78 +110,95 @@ def mark_text(text, indices, length, color = 'red'):    # Mark text and return c
         i += 1
     return ''.join(text), new_indices
 
-def search(session, grep = 7):      # Invokes both the searching functions
+def search(session, word = None, lang = None, start = None, end = None, grep = 7):
+    '''Invokes one of the searching functions and does some useful stuff'''
     sess.clear_screen()
     now = datetime.now()
+
+    def check_lang(input_val):
+        return 'p' if input_val in ['p', 'py', 'python'] else 'r' if input_val in ['r', 'rs', 'rust'] else None
+
+    def check_date(date):
+        if date in ['today', 'now', 'end']:
+            return now
+        elif date in ['start', 'birthday']:
+            return session.birthday
+        try:
+            return datetime.strptime(date, '%Y-%m-%d')
+        except (TypeError, ValueError):
+            return None
+
     # Phase 1: Get the user input required for searching through the stories
-    word = raw_input("\nEnter a word: ")
-    while True:
-        choices = ('Search everything! (Python)',
-                   'Search between two dates (Python)',
-                   'Search everything! (using the Rust library)')
-        if not os.path.exists(rust_lib):
-            choices = choices[:-1]
-        try:
-            choice = int(raw_input('\n\t' + '\n\t'.join(['%d. %s' % (i + 1, opt) for i, opt in enumerate(choices)]) \
-                                   + '\n\nChoice: '))
-            if choice - 1 not in range(len(choices)):
-                raise ValueError    # Because we also encounter ValueError if you enter other characters
-            else: break
-        except ValueError:
+    if not word:
+        word = raw_input("\nEnter a word: ")
+        while not word:
+            print sess.error, 'You must enter a word to continue!'
+            word = raw_input("\nEnter a word: ")
+
+    lang = check_lang(lang)
+    if not lang:    # Both the conditions can't be merged, because we need the former only once
+        lang = check_lang(raw_input('\nSearch using Python (or) Rust libarary (py/rs)? '))
+        while not lang:
             print sess.error, 'Invalid choice!'
-    if choice == 1 or (choice == 3 and len(choices) > 2):
-        d1 = session.birthday
-        d2 = now
-    while choice == 2:
+            lang = check_lang(raw_input('\nSearch using Python (or) Rust libarary (py/rs)? '))
+    if lang == 'r' and not os.path.exists(rust_lib):
+        print sess.warning, "Rust library not found! Please ensure that it's in the `target/release` folder."
+        print 'Going for default search using Python...'
+        lang = 'p'
+
+    start, end = map(check_date, [start, end])
+    while not all([start, end]):
         try:
-            print '\nEnter dates in the form YYYY-MM-DD (Mind you, with hyphen!)'
-            lower_bound = session.birthday
-            d1 = datetime.strptime(raw_input('Start date: '), '%Y-%m-%d')
-            assert d1 >= lower_bound and  d1 <= now
-            lower_bound = d1
-            d2 = raw_input("End date (Press [Enter] for today's date): ")
-            d2 = datetime.strptime(d2, '%Y-%m-%d') if d2 else now
-            assert d2 > lower_bound and d2 <= now
-        except AssertionError:
-            print sess.error, 'Please enter a date after %s and before %s' % \
-                              (lower_bound.strftime('%b. %d, %Y'), now.strftime('%b. %d, %Y'))
-            continue
+            print sess.warning, 'Enter dates in the form YYYY-MM-DD (Mind you, with hyphen!)\n'
+            if not start:
+                lower_bound = session.birthday
+                start_date = raw_input('Start date (Press [Enter] to begin from the start of your diary): ')
+                start = datetime.strptime(start_date, '%Y-%m-%d') if start_date else session.birthday
+                assert (start >= lower_bound and start <= now), 'Start'
+            if not end:
+                lower_bound = start
+                end_date = raw_input("End date (Press [Enter] for today's date): ")
+                end = datetime.strptime(end_date, '%Y-%m-%d') if end_date else now
+                assert (end > lower_bound and end <= now), 'End'
+        except AssertionError as msg:
+            print sess.error, '%s date should be after %s and before %s' % \
+                              (msg, lower_bound.strftime('%b. %d, %Y'), now.strftime('%b. %d, %Y'))
+            if str(msg).startswith('S'):
+                start = None
+            else:
+                end = None
         except ValueError:
             print sess.error, 'Oops! Error in input. Try again...'
-            continue
-        break
 
     # Phase 2: Send the datetimes to the respective searching functions
     print "\nSearching your stories for the word '%s'...\n" % word
+    search_function = rusty_search if lang == 'r' else py_search
     try:
-        if choice in (1, 2):
-            occurrences, timing = py_search(session, d1, d2, word)
-        else:
-            occurrences, timing = rusty_search(session, d1, d2, word)
+        occurrences, timing = search_function(session, start, end, word)
     except AssertionError:
         print sess.error, 'There are no stories in the given location!'
         return
 
     def print_stuff(grep):      # function to choose between pretty and ugly printing
-        results_begin = '\nSearch results from %s to %s:' % (d1.strftime('%B %d, %Y'), d2.strftime('%B %d, %Y')) + \
+        results_begin = '\nSearch results from %s to %s:' % (start.strftime('%B %d, %Y'), end.strftime('%B %d, %Y')) + \
                         "\n\nStories on these days have the word '%s' in them...\n" % word
         if grep:    # pretty printing the output (at the cost of decrypting time)
             try:
-                start = timer()
+                timer_start = timer()
                 print results_begin
                 for i, (n, word_count, indices) in enumerate(occurrences):
                     colored = []
-                    date = d1 + timedelta(n)
+                    date = start + timedelta(n)
                     content = Story(session, date).decrypt()
                     numbers = str(i + 1) + '. ' + date.strftime('%B %d, %Y (%A)')
                     text, indices = mark_text(content, indices, jump)   # precisely indicate the word in text
                     for idx in indices:     # find the word occurrences
-                        begin = find_line_boundary(text, idx, grep, -1)
-                        end = find_line_boundary(text, idx, grep, 1)
-                        sliced = '\t' + '... ' + text[begin:end].strip() + ' ...'
+                        left_bound = find_line_boundary(text, idx, grep, -1)
+                        right_bound = find_line_boundary(text, idx, grep, 1)
+                        sliced = '\t' + '... ' + text[left_bound:right_bound].strip() + ' ...'
                         colored.append(sliced)
                     print numbers, '\n%s' % '\n'.join(colored)  # print the numbers along with the word occurrences
-                stop = timer()
+                timer_stop = timer()
             except (KeyboardInterrupt, EOFError):
                 sleep(sess.capture_wait)
                 grep = 0    # default back to ugly printing
@@ -202,7 +219,7 @@ def search(session, grep = 7):      # Invokes both the searching functions
               (sess.fmt('blue'), sess.fmt('green'), timing, sess.fmt())
         if grep:
             print '  %sTime taken for pretty printing: %s%s seconds!%s' \
-                  % (sess.fmt('blue'), sess.fmt('green'), stop - start, sess.fmt())
+                  % (sess.fmt('blue'), sess.fmt('green'), timer_stop - timer_start, sess.fmt())
 
     # Phase 3: Print the results (in a pretty or ugly way) using the giant function below
     jump, num_stories = len(word), len(occurrences)
@@ -220,18 +237,19 @@ def search(session, grep = 7):      # Invokes both the searching functions
             print '\nEnter a number to see the corresponding story...'
             print "(Enter 'pretty' or 'ugly' to print those search results again, or press [Enter] to exit)"
             ch = raw_input('\nInput: ')
+            sess.clear_screen()
             if ch == 'pretty':
-                print_stuff(grep)
+                print_stuff(grep = 7)       # '7' is default, because it looks kinda nice
                 continue
             elif ch == 'ugly':
-                print_stuff(None)
+                print_stuff(grep = 0)
                 continue
             elif not ch or int(ch) - 1 < 0:
                 return
             else:
                 n_day, word_count, indices = occurrences[int(ch) - 1]
-                date = d1 + timedelta(n_day)
-                (data, start, end) = Story(session, date).view(return_text = True)
-                print start, mark_text(data, indices, jump, 'skyblue')[0], end
+                date = start + timedelta(n_day)
+                (data, welcome, farewell) = Story(session, date).view(return_text = True)
+                print welcome, mark_text(data, indices, jump, 'skyblue')[0], farewell
         except (ValueError, IndexError):
             print sess.error, 'Oops! Bad input...'

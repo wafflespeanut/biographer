@@ -2,6 +2,7 @@ from time import sleep
 
 import session as sess
 from options import backup, change_pass, random
+from search import search
 from story import Story
 
 help_string = '''
@@ -23,22 +24,17 @@ encrypt [=date]
                 Encrypt an accidentally decrypted story
 search [=word]  Search for a given word (with optional arguments)
 
-  lang [=python|rust]
+  lang [=py|rs]
                 Whether to use Python or the Rust library
-  begin [=date] (default: your diary's birthday)
+  start [=date] (default: your diary's birthday)
                 Search from this date
   end [=date] (default: today)
                 Search until this date
 
-  format [=red|green|blue|skyblue|violet|black|white|bold|italic|strike|underline]
-                Format for marking the words after searching (default: skyblue)
-
-  ugly          Just show the stories and occurrences
-  pretty [=format] (default: red)
-                Show the precise sentence which contains your word
-    grep [=N] (default: 7)
-                Number of words that should be extracted surrounding
-                the search word while pretty printing
+  ugly          Just show the stories and occurrences (shorthand for `grep=0`)
+  grep [=N] (default: 7)
+                Pretty print the precise region containing your word
+                Extract [N] words surrounding the search word while printing
 '''
 
 help_string = '\n  '.join(help_string.split('\n'))
@@ -50,11 +46,15 @@ def create_session():
         return session
     exit('\nGoodbye...\n')
 
+def split_arg(arg):
+    thing = arg.split('=')
+    opt, val = thing[0], thing[1] if len(thing) == 2 else None
+    val = None if val in ['0', 'None', '""', "''"] else val
+    return opt, val
+
 def analyse_args(args):
     try:
-        option, value = args[0].split('=')
-    except ValueError:
-        option, value = args[0], None
+        option, value = split_arg(args[0])
     except IndexError:
         return create_session()
 
@@ -69,15 +69,27 @@ def analyse_args(args):
         'view': 'Story(create_session(), when = value).view()',
         'backup': 'backup(create_session(), backup_loc = value)',
         'encrypt': 'Story(create_session(), when = value).encrypt()',
-        # `search` is not done here, because it requires some special handling
     }
 
     try:
-        exec(allowed_opts[option])
-        exit('\nGoodbye...\n')
+        if option == 'search':      # special handling for `search`
+            args.extend(['lang=None', 'start=start', 'end=end', 'grep'])
+            options, values = zip(*map(split_arg, args))
+            grep_val = values[options.index('grep')] if 'ugly' not in options else '0'
+            grep_val = grep_val if grep_val else 7      # '7' is rather smooth
+            search_args = dict(session = create_session(),
+                               word = value,
+                               lang = values[options.index('lang')],
+                               start = values[options.index('start')],
+                               end = values[options.index('end')],
+                               grep = int(grep_val))
+            search(**search_args)
+        else:
+            exec(allowed_opts[option])
+        exit('')
     except KeyError:
         print sess.error, 'Invalid arguments! Continuing with the default...'
         return create_session()
     except (KeyboardInterrupt, EOFError):
         sleep(sess.capture_wait)
-        exit('')
+        exit('\nGoodbye...\n')

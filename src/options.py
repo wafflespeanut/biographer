@@ -32,7 +32,7 @@ def random(session):    # Useful only when you have a lot of stories (obviously)
 
 def backup(session, backup_loc = None):
     try:
-        if not (backup_loc and sess.write_access(os.path.expanduser(backup_loc))):
+        if not all([backup_loc, sess.write_access(os.path.expanduser(backup_loc))]):
             backup_loc = '~/Desktop'
         abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%Y-%m-%d)'))
         print '\nBacking up to %s...' % abs_path
