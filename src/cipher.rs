@@ -9,9 +9,8 @@ pub enum Mode {
 }
 
 // Invokes the helper functions and does its shifting thing
-pub fn zombify(mode: Mode, data: &Vec<u8>, key: &str) -> Vec<u8> {
+pub fn zombify(mode: Mode, data: &[u8], key: &str) -> Vec<u8> {
     let hexed_key = key.as_bytes().to_hex();
-    let mut text = data.clone();
     let amount: u8 = hexed_key
                      .as_bytes()
                      .iter()
@@ -19,14 +18,14 @@ pub fn zombify(mode: Mode, data: &Vec<u8>, key: &str) -> Vec<u8> {
     match mode {
         Mode::Encrypt => {
             // well, this won't be useful since the library is meant to only decrypt files (for now)
-            text = data.to_hex().into_bytes();
+            let text = data.to_hex().into_bytes();
             let stuff = cbc(mode, &text);
             let shifted_text = shift(&stuff, amount);
             xor(&shifted_text, &key)
         },
         Mode::Decrypt => {
             let amount = 0u8.wrapping_sub(amount);      // shift by (256 - amount) for the reverse
-            let shifted_text = xor(&text, &key);
+            let shifted_text = xor(data, &key);
             let stuff = shift(&shifted_text, amount);
             charred(cbc(mode, &stuff))
         },

@@ -1,4 +1,3 @@
-#![feature(cstr_memory2)]
 #![allow(dead_code, deprecated, unused_imports)]
 
 extern crate libc;
@@ -19,8 +18,8 @@ use libc::{size_t, c_char};
 
 #[no_mangle]
 // FFI function just to kill a transferred pointer
-pub extern fn kill_pointer(p: *const c_char) {
-    unsafe { CString::from_ptr(p) };     // Theoretically, Rust should take the ownership back
+pub extern fn kill_pointer(raw_pointer: *mut c_char) {
+    unsafe { CString::from_raw(raw_pointer) };      // Rust "should" take the ownership back here
 }   // variable goes out of scope here and the C-type string should be destroyed
 
 #[no_mangle]
@@ -29,10 +28,11 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
     // get the raw pointer values to the strings from the array pointer
     let array = unsafe { slice::from_raw_parts(array, length as usize) };
     let mut stuff: Vec<&str> = array.iter()
-        .map(|&p| unsafe { CStr::from_ptr(p) })         // get the C-type string from the pointer
-        .map(|c_string| c_string.to_bytes())            // convert the raw thing to bytes
-        .map(|byte| str::from_utf8(byte).unwrap())      // finally collect the corresponding strings
-        .collect();
+                                    .map(|&p| {
+                                        let c_str = unsafe { CStr::from_ptr(p) };
+                                        let byte = c_str.to_bytes();
+                                        str::from_utf8(byte).unwrap()
+                                    }).collect();
     let word = stuff.pop().unwrap();
     let key = stuff.pop().unwrap();
 
@@ -78,7 +78,7 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
                                    .collect();
 
     let count_string = occurrences.join(" ");
-    CString::new(count_string).unwrap().into_ptr()      // the FFI code should now own the memory
+    CString::new(count_string).unwrap().into_raw()      // FFI "should" now own the memory
 }
 
 // Gives a tuple of a file's size and a vector of its contents
