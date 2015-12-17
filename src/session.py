@@ -1,4 +1,4 @@
-import inspect, os, sys
+import os, sys
 from datetime import datetime
 from getpass import getpass
 from hashlib import sha256
@@ -19,9 +19,6 @@ def format_text(text, formatting, dark = False):
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
-
-filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
-path = os.path.dirname(os.path.abspath(filename))
 
 error, warning, success = map(lambda s: '\n' + format_text(s, 'bold'),
                               (format_text('[ERROR]', 'red'),

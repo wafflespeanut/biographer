@@ -1,4 +1,4 @@
-#![allow(dead_code, deprecated, unused_imports)]
+#![allow(dead_code)]
 
 extern crate libc;
 extern crate rand as random;
@@ -12,7 +12,7 @@ use std::fs::File;
 use std::io::Read;
 use std::sync::mpsc;
 use std::{str, slice, thread};
-use libc::{size_t, c_char};
+use libc::{size_t, c_char, c_uint};
 
 // You'll be needing Nightly rust, because `from_ptr` for C-types is unstable and deprecated
 
@@ -23,8 +23,10 @@ pub extern fn kill_pointer(raw_pointer: *mut c_char) {
 }   // variable goes out of scope here and the C-type string should be destroyed
 
 #[no_mangle]
-// FFI function to be called from Python (I've commented out some of the methods I'd tried)
-pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c_char {
+// FFI function to be called from Python
+pub extern fn get_stuff(array: *const *const c_char,
+                        length: size_t,
+                        mode: c_uint) -> *const c_char {
     // get the raw pointer values to the strings from the array pointer
     let array = unsafe { slice::from_raw_parts(array, length as usize) };
     let mut stuff: Vec<&str> = array.iter()
@@ -33,16 +35,22 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
                                         let byte = c_str.to_bytes();
                                         str::from_utf8(byte).unwrap()
                                     }).collect();
-    let word = stuff.pop().unwrap();
+    // yeah, I blindly trust myself that I send this exact format here just as expected
+    let word = match mode as usize {
+        1 => Some(stuff.pop().unwrap()),
+        _ => None,
+    };
     let key = stuff.pop().unwrap();
 
+    // (I've commented out some of the methods I'd tried)
+    //
     // // pure iteration (decreases the time by a factor of 50 ± 10)
     // let occurrences = stuff
     //                   .iter()
     //                   .map(|file_name| count_words(&file_name, &key, &word))
     //                   .collect::<Vec<String>>();
 
-    // // basic concurrency - threads (decreases the time by a factor of 65 ± 10)
+    // // basic concurrency using threads (decreases the time by a factor of 65 ± 10)
     // let threads: Vec<_> = stuff
     //                       .into_iter()
     //                       .enumerate()
@@ -62,7 +70,7 @@ pub extern fn get_stuff(array: *const *const c_char, length: size_t) -> *const c
                           .map(|(idx, file_name)| {
                               let tx = tx.clone();
                               thread::spawn(move || {
-                                  tx.send((idx, count_words(&file_name, &key, &word))).unwrap()
+                                  tx.send((idx, count_words(&file_name, &key, word))).unwrap()
                               })
                           }).collect();
     let mut result: Vec<(usize, String)> = threads
@@ -112,12 +120,30 @@ fn search(text_vec: &[u8], word: &str) -> String {
     }
 }
 
+// Counts the words in individual stories
+fn count(text_vec: &[u8]) -> String {
+    let text = &*(String::from_utf8_lossy(text_vec));
+    let mut extra = 0;
+    let count = text.split_whitespace()
+                    .fold(0, |count, word| {
+                        if word.starts_with("[") && word.ends_with("]") && word.len() == 12 {
+                            extra += 2;     // count the timestamps
+                        } count + 1
+                    });
+    format!("{}", (count - extra))
+}
+
 // This just decrypts the file and counts the word in it (just to simplify things)
-fn count_words(file_name: &str, key: &str, word: &str) -> String {
+fn count_words(file_name: &str, key: &str, word: Option<&str>) -> String {
     let contents = fopen(&file_name).1;
     let decrypted = zombify(Mode::Decrypt, &contents, key);
     if decrypted.is_empty() {
         println!("\nCannot decrypt the story! (filepath: {})", file_name);
         return "0".to_owned();
-    } search(&decrypted, word)
+    };
+
+    match word {
+        Some(string) => search(&decrypted, string),
+        None => count(&decrypted),
+    }
 }

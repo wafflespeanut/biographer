@@ -1,4 +1,4 @@
-import os, sys, ctypes
+import os, sys
 from datetime import datetime, timedelta
 from time import sleep
 from timeit import default_timer as timer
@@ -6,13 +6,36 @@ from timeit import default_timer as timer
 import session as sess
 from options import date_iter
 from story import Story
+from utils import rustlib_path, ffi_channel
 
-prefix = {'win32': ''}.get(sys.platform, 'lib')
-ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
-rust_lib = os.path.join(os.path.dirname(sess.path), 'target', 'release', prefix + 'biographer' + ext)
+def build_paths(session, date_start, date_end):
+    path_list = []
+    for day, n, total, progress in date_iter(date_start, date_end):
+        file_path = Story(session, day).get_path()
+        if file_path:
+            path_list.append(file_path)
+        sys.stdout.write('\rBuilding the path list... %d%s (%d/%d)' % (progress, '%', n, total))
+        sys.stdout.flush()
+    assert path_list
+    path_list.append(session.key)
+    return path_list
+
+def rusty_search(session, date_start, date_end, word):      # FFI for giving the searching job to Rust
+    occurrences = []
+    list_to_send = build_paths(session, date_start, date_end)
+    list_to_send.append(word)
+    count_string, timing = ffi_channel(list_to_send, mode = 1)
+    print 'Parsing the data stream from Rust...'
+    for i, string in enumerate(count_string.split(' ')):    # spaces in the data stream represent individual files
+        idx = map(int, string.split(':'))       # ... and colons represent the indices where the word has occurred
+        # Rust fills the indices of the file paths with the number of occurrences
+        # So, "i" indicates the Nth day from the birthday
+        if idx[0] > 0:
+            occurrences.append((i, len(idx), idx))
+    return occurrences, timing
 
 # Exhaustive process (that's why I've written a Rust library for this!)
-# The library accelerates this search by about ~100 times!
+# The library accelerates the search time by ~100 times!
 def py_search(session, date_start, date_end, word):
     occurrences, errors, no_stories = [], 0, 0
     start = timer()
@@ -43,45 +66,6 @@ def py_search(session, date_start, date_end, word):
     assert no_stories < total
     return occurrences, (timer() - start)
 
-# You'll be needing the Nightly rust for compiling the library
-# because the library depends on a future method and a deprecated method
-def rusty_search(session, date_start, date_end, word):      # FFI for giving the searching job to Rust
-    path_list = []
-    for day, n, total, progress in date_iter(date_start, date_end):
-        file_path = Story(session, day).get_path()
-        if file_path:
-            path_list.append(file_path)
-        sys.stdout.write('\rBuilding the path list... %d%s (%d/%d)' % (progress, '%', n, total))
-        sys.stdout.flush()
-    assert path_list
-
-    print '\nSending the paths to the Rust FFI...'
-    lib = ctypes.cdll.LoadLibrary(rust_lib)
-    list_to_send = path_list[:]
-    list_to_send.extend((session.key, word))
-
-    # send an array pointer full of strings (like a pointer to ['blah', 'blah', 'blah'])
-    lib.get_stuff.argtypes = (ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t)
-    lib.get_stuff.restype = ctypes.c_void_p         # type declarations must be done or else, segfault!
-    lib.kill_pointer.argtypes = [ctypes.c_void_p]
-
-    start = timer()     # Timer begins once we send the proper data to Rust
-    c_array = (ctypes.c_char_p * len(list_to_send))(*list_to_send)
-    c_pointer = lib.get_stuff(c_array, len(list_to_send))       # sending the list (as C-array) to Rust..
-    count_string = ctypes.c_char_p(c_pointer).value
-    lib.kill_pointer(c_pointer)     # sending the pointer back to Rust for destruction!
-    stop = timer()      # Timer ends here, because we don't wanna include Python's parsing time
-
-    occurrences = []
-    print 'Parsing the data stream from Rust...'
-    for i, string in enumerate(count_string.split(' ')):    # spaces in the data stream represents individual files
-        idx = map(int, string.split(':'))       # ... and colons represent the indices where the word has occurred
-        # Rust fills the indices of the file paths with the number of occurrences
-        # So, "i" indicates the Nth from the birthday
-        if idx[0] > 0:
-            occurrences.append((i, len(idx), idx))
-    return occurrences, (stop - start)
-
 def find_line_boundary(text, idx, limit, direction_value):  # find the closest boundary of text for a given limit
     i, num = idx, 0
     while text[i + direction_value] not in ('\n', '\t'):
@@ -91,11 +75,11 @@ def find_line_boundary(text, idx, limit, direction_value):  # find the closest b
     return i
 
 def mark_text(text, indices, length, color = 'red'):    # Mark text and return corrected indices
-    if sys.platform == 'win32':         # Damn OS doesn't even support coloring
+    if sys.platform == 'win32':         # damn OS doesn't even support coloring
         return text, indices
     text = list(text)
     formatter = sess.fmt(color), sess.fmt()
-    lengths = map(len, formatter)       # We gotta update the indices when we introduce colored text
+    lengths = map(len, formatter)       # we gotta update the indices when we introduce colored text
     i, limit = 0, len(indices)
     new_indices = indices[:]
     while i < limit:
@@ -141,7 +125,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
         while not lang:
             print sess.error, 'Invalid choice!'
             lang = check_lang(raw_input('\nSearch using Python (or) Rust libarary (py/rs)? '))
-    if lang == 'r' and not os.path.exists(rust_lib):
+    if lang == 'r' and not os.path.exists(rustlib_path):
         print sess.warning, "Rust library not found! Please ensure that it's in the `target/release` folder."
         print 'Going for default search using Python...'
         lang = 'p'

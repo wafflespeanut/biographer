@@ -6,15 +6,7 @@ from time import sleep
 
 import session as sess
 from story import Story, hasher
-
-# tirelessly provide datetimes along with optional progress
-def date_iter(date_start, date_end = datetime.now(), progress = True):
-    total = (date_end - date_start).days + 1      # include the final day
-    for i in xrange(total):
-        if progress:
-            yield (date_start + timedelta(i), i + 1, total, int((float(i + 1) / total) * 100))
-        else:
-            yield date_start + timedelta(i)
+from utils import date_iter
 
 def random(session):    # Useful only when you have a lot of stories (obviously)
     num_days = (datetime.now() - session.birthday).days
@@ -32,7 +24,7 @@ def random(session):    # Useful only when you have a lot of stories (obviously)
 
 def backup(session, backup_loc = None):
     try:
-        if not all([backup_loc, sess.write_access(os.path.expanduser(backup_loc))]):
+        if not (backup_loc and sess.write_access(os.path.expanduser(backup_loc))):
             backup_loc = '~/Desktop'
         abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%Y-%m-%d)'))
         print '\nBacking up to %s...' % abs_path

@@ -5,8 +5,8 @@ from src import session as sess
 from src.args import analyse_args
 from src.options import random, backup, change_pass
 from src.search import search
+from src.stats import rusty_stats
 from src.story import Story
-
 
 if __name__ == '__main__':
     _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
@@ -28,7 +28,8 @@ if __name__ == '__main__':
                 7: ("Change your password", 'change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
-                9: ("Encrypt a story", 'Story(session).encrypt()'),
+                9: ("View your statistics", 'rusty_stats(session)'),
+                10: ("Encrypt a story", 'Story(session).encrypt()'),
                 0: ("Exit the biographer", '') }
             for i in range(1, len(choices) - 1) + [0]:
                 print '\t\t%d. %s' % (i, choices[i][0])

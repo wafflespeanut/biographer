@@ -5,6 +5,7 @@ from string import punctuation
 from time import sleep
 
 from cipher import zombify
+from utils import simple_counter
 import session as sess
 
 def get_date():     # global function for getting date from the user in the absence of datetime object
@@ -134,7 +135,6 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
     def view(self, return_text = False):
         date_format = '\nYour story from %s ...\n' % (self.date.strftime('%B %d, %Y (%A)'))
         try:
-            stamp_count = 0
             if self.get_path():
                 data = self.decrypt()
             else:
@@ -143,16 +143,9 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
             print sess.error, "Baaah! Couldn't decrypt the story!"
             return
         sess.clear_screen()
-        split_data = data.split()
-        for word in split_data:     # simple word counter (which ignores the timestamps)
-            if word[0] == '[':
-                try:
-                    timestamp = datetime.strptime(word, '[%Y-%m-%d]')
-                    stamp_count += 2        # "2" for both date and time
-                except ValueError:
-                    pass
+        count = simple_counter(data)
         start = "%s\n<----- START OF STORY -----> (%d words)\n\n" % \
-                (sess.format_text(sess.format_text(date_format, 'violet'), 'bold'), len(split_data) - stamp_count)
+                (sess.format_text(sess.format_text(date_format, 'violet'), 'bold'), count)
         end = "<----- END OF STORY ----->"
         if return_text:
             return (data, start, end)
