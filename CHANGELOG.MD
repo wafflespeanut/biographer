@@ -1,12 +1,11 @@
 ### Checklist for next versions:
 
-- [x] Fix the flaws in the configuring, password changing and searching functions
-- [x] Improve the "grep" option and add a choice to ignore it
-- [x] Improve the code structure using objects
-- [x] Setup command-line options for writing, viewing and searching
-- [ ] Timestamp at the start of every story could compromise the cipher!
-- [ ] Persuade the search functions to help with pretty printing
-- [ ] Update Rust library to change password
+- [ ] Add statistics measurement
+- [ ] Parallelize searching (and other time-consuming stuff) in Python
+- [ ] Timestamp at the start of every story could compromise the cipher! (Idea: Implement AES in Python & Rust)
+- [ ] Persuade the searching functions to help with pretty printing
+- [ ] Update Rust library to change the password
+- [ ] Add unit tests & benchmark tests
 
 ### Changelog
 

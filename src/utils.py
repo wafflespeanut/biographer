@@ -53,3 +53,27 @@ def ffi_channel(list_to_send, mode):
     lib.kill_pointer(c_pointer)     # sending the pointer back to Rust for destruction!
     stop = timer()      # Timer ends here, because we don't wanna include Python's parsing time
     return string_result, (stop - start)
+
+def force_input(input_val, input_msg, error, func = lambda s: s):
+    # force the user to enter an input (with an optional function to check the given input)
+    if not input_val:
+        input_val = func(raw_input(input_msg))
+        while not input_val:
+            print error
+            input_val = func(raw_input(input_msg))
+    return input_val
+
+def get_lang(lang, error, warning):
+    # get language from user if it's not passsed as a command-line argument
+    def check_lang(input_val):
+        return 'p' if input_val in ['p', 'py', 'python'] else 'r' if input_val in ['r', 'rs', 'rust'] else None
+
+    lang = force_input(check_lang(lang),
+                       '\nSearch using Python (or) Rust libarary (py/rs)? ',
+                       error + ' Invalid choice!',
+                       check_lang)
+    if lang == 'r' and not os.path.exists(rustlib_path):
+        print warning, "Rust library not found! (Please ensure that it's in the `target/release` folder)"
+        print 'Falling back to the default search using Python...'
+        lang = 'p'
+    return lang

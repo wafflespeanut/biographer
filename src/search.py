@@ -6,7 +6,7 @@ from timeit import default_timer as timer
 import session as sess
 from options import date_iter
 from story import Story
-from utils import rustlib_path, ffi_channel
+from utils import ffi_channel, force_input, get_lang
 
 def build_paths(session, date_start, date_end):
     path_list = []
@@ -99,9 +99,6 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
     sess.clear_screen()
     now = datetime.now()
 
-    def check_lang(input_val):
-        return 'p' if input_val in ['p', 'py', 'python'] else 'r' if input_val in ['r', 'rs', 'rust'] else None
-
     def check_date(date):
         if date in ['today', 'now', 'end']:
             return now
@@ -113,24 +110,10 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             return None
 
     # Phase 1: Get the user input required for searching through the stories
-    if not word:
-        word = raw_input("\nEnter a word: ")
-        while not word:
-            print sess.error, 'You must enter a word to continue!'
-            word = raw_input("\nEnter a word: ")
-
-    lang = check_lang(lang)
-    if not lang:    # Both the conditions can't be merged, because we need the former only once
-        lang = check_lang(raw_input('\nSearch using Python (or) Rust libarary (py/rs)? '))
-        while not lang:
-            print sess.error, 'Invalid choice!'
-            lang = check_lang(raw_input('\nSearch using Python (or) Rust libarary (py/rs)? '))
-    if lang == 'r' and not os.path.exists(rustlib_path):
-        print sess.warning, "Rust library not found! Please ensure that it's in the `target/release` folder."
-        print 'Going for default search using Python...'
-        lang = 'p'
-
+    word = force_input(word, "\nEnter a word: ", sess.error + ' You must enter a word to continue!')
+    lang = get_lang(lang, sess.error, sess.warning)
     start, end = map(check_date, [start, end])
+
     while not all([start, end]):
         try:
             print sess.warning, 'Enter dates in the form YYYY-MM-DD (Mind you, with hyphen!)\n'
@@ -138,16 +121,16 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 lower_bound = session.birthday
                 start_date = raw_input('Start date (Press [Enter] to begin from the start of your diary): ')
                 start = datetime.strptime(start_date, '%Y-%m-%d') if start_date else session.birthday
-                assert (start >= lower_bound and start <= now), 'Start'
+                assert (start >= lower_bound and start <= now), 'S'
             if not end:
                 lower_bound = start
                 end_date = raw_input("End date (Press [Enter] for today's date): ")
                 end = datetime.strptime(end_date, '%Y-%m-%d') if end_date else now
-                assert (end > lower_bound and end <= now), 'End'
+                assert (end > lower_bound and end <= now), 'E'
         except AssertionError as msg:
             print sess.error, '%s date should be after %s and before %s' % \
                               (msg, lower_bound.strftime('%b. %d, %Y'), now.strftime('%b. %d, %Y'))
-            if str(msg).startswith('S'):
+            if str(msg) == 'S':
                 start = None
             else:
                 end = None
@@ -221,6 +204,8 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             print '\nEnter a number to see the corresponding story...'
             print "(Enter 'pretty' or 'ugly' to print those search results again, or press [Enter] to exit)"
             ch = raw_input('\nInput: ')
+            if not ch or ch == '0':
+                return
             sess.clear_screen()
             if ch == 'pretty':
                 print_stuff(grep = 7)       # '7' is default, because it looks kinda nice
@@ -228,8 +213,6 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             elif ch == 'ugly':
                 print_stuff(grep = 0)
                 continue
-            elif not ch or int(ch) - 1 < 0:
-                return
             else:
                 n_day, word_count, indices = occurrences[int(ch) - 1]
                 date = start + timedelta(n_day)

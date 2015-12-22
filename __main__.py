@@ -28,7 +28,7 @@ if __name__ == '__main__':
                 7: ("Change your password", 'change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
-                9: ("View your statistics", 'rusty_stats(session)'),
+                9: ("View your statistics", 'py_stats(session)'),
                 10: ("Encrypt a story", 'Story(session).encrypt()'),
                 0: ("Exit the biographer", '') }
             for i in range(1, len(choices) - 1) + [0]:
