@@ -12,7 +12,7 @@ def rusty_stats(session):
 
 def py_stats(session):      # FIXME: shares a lot of code with `py_search` - refactor them out!
     word_count, no_stories = 0, 0
-    for day, n, total, progress in date_iter(date_start, date_end):
+    for _i, day in date_iter(date_start, date_end, '  Progress: %s [Total words: {}]'.format(word_count)):
         story = Story(session, day)
         try:
             if not story.get_path():
@@ -25,8 +25,5 @@ def py_stats(session):      # FIXME: shares a lot of code with `py_search` - ref
             if errors > 10:
                 print sess.error, "More than 10 files couldn't be decrypted! Terminating the search..."
                 return None
-        sys.stdout.write('\r  Progress: %d%s (%d/%d) [Found: %d]' % (progress, '%', n, total, sum_value))
-        sys.stdout.flush()
-    print
     assert no_stories < total
     return word_count

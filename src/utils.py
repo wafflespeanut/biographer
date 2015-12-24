@@ -9,14 +9,21 @@ prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
 rustlib_path = os.path.join(os.path.dirname(exec_path), 'target', 'release', prefix + 'biographer' + ext)
 
-# tirelessly provide datetimes along with optional progress
-def date_iter(date_start, date_end = datetime.now(), progress = True):
+def date_iter(date_start, date_end = datetime.now(), progress_msg = None, communicate = False):
+    '''Tirelessly provide datetimes along with optional progress display'''
     total = (date_end - date_start).days + 1      # include the final day
+    print
     for i in xrange(total):
-        if progress:
-            yield (date_start + timedelta(i), i + 1, total, int((float(i + 1) / total) * 100))
-        else:
-            yield date_start + timedelta(i)
+        if progress_msg:
+            progress = '%d%% (%d/%d)' % (int((float(i + 1) / total) * 100), i + 1, total)
+            if communicate:     # listen to the caller
+                msg = yield
+                if type(msg) == str:
+                    progress_msg += msg
+            sys.stdout.write('\r%s' % (progress_msg % progress))
+            sys.stdout.flush()
+        yield (i, date_start + timedelta(i))
+    print
 
 def simple_counter(story_data):   # simple word counter (which ignores the timestamps)
     stamp_count = 0

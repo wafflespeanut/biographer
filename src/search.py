@@ -4,18 +4,15 @@ from time import sleep
 from timeit import default_timer as timer
 
 import session as sess
-from options import date_iter
 from story import Story
-from utils import ffi_channel, force_input, get_lang
+from utils import date_iter, ffi_channel, force_input, get_lang
 
 def build_paths(session, date_start, date_end):
     path_list = []
-    for day, n, total, progress in date_iter(date_start, date_end):
+    for _i, day in date_iter(date_start, date_end, 'Building the path list... %s'):
         file_path = Story(session, day).get_path()
         if file_path:
             path_list.append(file_path)
-        sys.stdout.write('\rBuilding the path list... %d%s (%d/%d)' % (progress, '%', n, total))
-        sys.stdout.flush()
     assert path_list
     path_list.append(session.key)
     return path_list
@@ -37,17 +34,19 @@ def rusty_search(session, date_start, date_end, word):      # FFI for giving the
 # Exhaustive process (that's why I've written a Rust library for this!)
 # The library accelerates the search time by ~100 times!
 def py_search(session, date_start, date_end, word):
-    occurrences, errors, no_stories = [], 0, 0
+    occurrences, errors, no_stories, = [], 0, 0
     start = timer()
-    for day, n, total, progress in date_iter(date_start, date_end):
+    iterator = date_iter(date_start, date_end, '  Progress: %s', communicate = True)
+    iterator.send(None)
+    for i, day in iterator:
         occurred, story = [], Story(session, day)
         try:
             if not story.get_path():
                 no_stories += 1
                 continue
-            data = story.decrypt()
+            data = story.decrypt()      # AssertionError (if any) is caught here
             idx, jump, data_len = 0, len(word), len(data)
-            while idx < data_len:   # probably an inefficient way to find the word indices
+            while idx < data_len:       # probably an inefficient way to find the word indices
                 idx = data.find(word, idx)
                 if idx == -1: break
                 occurred.append(idx)
@@ -57,12 +56,10 @@ def py_search(session, date_start, date_end, word):
             if errors > 10:
                 print sess.error, "More than 10 files couldn't be decrypted! Terminating the search..."
                 return [], (timer() - start)
-        if occurred and occurred[0] > 0:    # "n - 1" indicates the Nth day from the birthday
-            occurrences.append((n - 1, len(occurred), occurred))
+        if occurred and occurred[0] > 0:    # "i" indicates the Nth day from the birthday
+            occurrences.append((i, len(occurred), occurred))
         sum_value = sum(map(lambda stuff: stuff[1], occurrences))
-        sys.stdout.write('\r  Progress: %d%s (%d/%d) [Found: %d]' % (progress, '%', n, total, sum_value))
-        sys.stdout.flush()
-    print
+        iterator.send(' [Found: %d]' % sum_value)
     assert no_stories < total
     return occurrences, (timer() - start)
 
@@ -138,7 +135,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             print sess.error, 'Oops! Error in input. Try again...'
 
     # Phase 2: Send the datetimes to the respective searching functions
-    print "\nSearching your stories for the word '%s'...\n" % word
+    print "\nSearching your stories for the word '%s'..." % word
     search_function = rusty_search if lang == 'r' else py_search
     try:
         occurrences, timing = search_function(session, start, end, word)
@@ -204,19 +201,20 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             print '\nEnter a number to see the corresponding story...'
             print "(Enter 'pretty' or 'ugly' to print those search results again, or press [Enter] to exit)"
             ch = raw_input('\nInput: ')
-            if not ch or ch == '0':
-                return
-            sess.clear_screen()
             if ch == 'pretty':
+                sess.clear_screen()
                 print_stuff(grep = 7)       # '7' is default, because it looks kinda nice
-                continue
             elif ch == 'ugly':
+                sess.clear_screen()
                 print_stuff(grep = 0)
-                continue
+            elif not ch:
+                return
+            elif int(ch) <= 0:
+                raise ValueError
             else:
                 n_day, word_count, indices = occurrences[int(ch) - 1]
                 date = start + timedelta(n_day)
-                (data, welcome, farewell) = Story(session, date).view(return_text = True)
-                print welcome, mark_text(data, indices, jump, 'skyblue')[0], farewell
+                (data, top, bottom) = Story(session, date).view(return_text = True)
+                print top, mark_text(data, indices, jump, 'skyblue')[0], bottom
         except (ValueError, IndexError):
-            print sess.error, 'Oops! Bad input...'
+            print sess.error, 'Oops! Bad input! Try again...'

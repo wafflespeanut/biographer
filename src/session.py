@@ -61,15 +61,15 @@ class Session(object):
                                % (self.config_location, os.path.expanduser('~/.biographer'))
                 sleep(3)
                 raw_input('\nPress [Enter] to continue...')
-        except KeyboardInterrupt:
-            pass
-        if is_bare:     # A bare session for doing those stuff which don't require a password (`help` or `configure`)
+        except KeyboardInterrupt:   # we don't have to worry if the user interrupts anywhere along the way
+            pass                # because, the session doesn't have any information, and so the program quits!
+        if is_bare:     # for some command-line options which shouldn't require a password (`help` or `configure`)
             return
         if os.access(path, os.W_OK):
             self.configure()
 
     def reset(self):
-        self.location, self.key, self.birthday, self.loop = [None] * 3 + [False]
+        self.location, self.key, self.birthday, self.loop = [None] * 4
 
     def delete_config_file(self):
         if os.path.exists(self.config_location):
@@ -137,17 +137,16 @@ class Session(object):
         This is handy whenever we wanna rewrite the configuration file,
         because we could just overwrite the object and call this function
         '''
-        if os.path.exists(self.config_location) and os.path.getsize(self.config_location):
-            msg = 'Configuration file has been updated!'
-        else:
-            msg = 'Login credentials have been saved locally!'
+        msg = 'Configuration file has been updated!' if os.path.exists(self.config_location) and \
+                                                        os.path.getsize(self.config_location) \
+                                                     else 'Login credentials have been saved locally!'
         with open(self.config_location, 'w') as file_data:
             file_data.write('\n'.join([hasher(sha256, self.key),
                                        self.location,
                                        self.birthday.strftime('%Y-%m-%d')]))
         print success, msg
 
-    def reconfigure(self):
+    def reconfigure(self):      # FIXME: Could take arguments via command-line?
         '''Reset the diary's configuration'''
         try:
             self.reset()
@@ -161,7 +160,7 @@ class Session(object):
                 self.location = os.path.expanduser(raw_input('\nPlease enter a valid path: '))
             if not self.location.rstrip(os.sep).endswith('Diary'):  # just put everything in a folder for Diary
                 self.location = os.path.join(self.location, 'Diary')
-                print 'Reminding you that this will make use of %r' % self.location
+                print '(Reminding you that this will make use of %r)' % self.location
                 if not os.path.exists(self.location):
                     os.mkdir(self.location)
             self.location = self.location.rstrip(os.sep) + os.sep

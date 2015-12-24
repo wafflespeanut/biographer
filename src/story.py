@@ -37,38 +37,38 @@ class Story(object):
     def __init__(self, session, when = None, is_write = False):
         try:
             if when == 'today' or when == 'now':
-                self.date = datetime.now()
+                self._date = datetime.now()
             elif type(when) is str:
-                self.date = datetime.strptime(when, '%Y-%m-%d')
+                self._date = datetime.strptime(when, '%Y-%m-%d')
             elif type(when) is datetime:
-                self.date = when
+                self._date = when
             else:
                 raise ValueError
         except ValueError:
-            self.date = get_date()
+            self._date = get_date()
         # just in case if you plan to write your past days beyond the birthday
-        if is_write and self.date < session.birthday:   # you wouldn't want this when you're viewing!
+        if is_write and self._date < session.birthday:   # you wouldn't want this when you're viewing!
             print sess.warning, "Reconfiguring your diary to include those 'past' days..."
-            session.birthday = self.date
+            session.birthday = self._date
             session.write_to_config_file()
             sleep(1)
-        self.path = os.path.join(session.location, self.get_hash())
-        self.key = session.key      # have a copy of the password so that we don't always have to invoke Session
+        self._path = os.path.join(session.location, self.get_hash())
+        self._key = session.key     # have a copy of the password so that we don't always have to invoke Session
 
     def get_hash(self):
-        return hasher(md5, self.date.strftime('Day %d (%B %Y)'))
+        return hasher(md5, self._date.strftime('Day %d (%B %Y)'))
 
     def get_path(self):     # return the path only if the file exists and it's not empty
-        return self.path if os.path.exists(self.path) and os.path.getsize(self.path) else None
+        return self._path if os.path.exists(self._path) and os.path.getsize(self._path) else None
 
     # read_data(), write_data(), encrypt() & decrypt() blindly assumes that the file exists
     # catching for IOErrors every time is rather boring, and so we can utilize get_path() to handle the "absence" case
     def read_data(self):
-        with open(self.path, 'rb') as file_data:
+        with open(self._path, 'rb') as file_data:
             return file_data.read()
 
     def write_data(self, data, mode = 'wb'):
-        with open(self.path, mode) as file:
+        with open(self._path, mode) as file:
             file.write(data)
 
     def encrypt(self, echo = True):
@@ -79,13 +79,13 @@ class Story(object):
             return
         except AssertionError:
             file_data = self.read_data()
-            data = zombify('e', sess.newline.join(file_data.split('\r')), self.key)  # to strip '\r' from the lines
+            data = zombify('e', sess.newline.join(file_data.split('\r')), self._key)  # to strip '\r' from the lines
             self.write_data(data)
             if echo:
                 print sess.success, 'Successfully encrypted the file! (filename hash: %s)' % self.get_hash()
 
     def decrypt(self, overwrite = False):
-        data = zombify('d', self.read_data(), self.key)
+        data = zombify('d', self.read_data(), self._key)
         assert data         # checking whether decryption has succeeded
         if overwrite:       # we catch the AssertionError later to indicate the wrong password input
             self.write_data(data)
@@ -133,12 +133,12 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
             self.view()
 
     def view(self, return_text = False):
-        date_format = '\nYour story from %s ...\n' % (self.date.strftime('%B %d, %Y (%A)'))
+        date_format = '\nYour story from %s ...\n' % (self._date.strftime('%B %d, %Y (%A)'))
         try:
             if self.get_path():
                 data = self.decrypt()
             else:
-                print sess.error, "Story doesn't exist on the given day! (%s)" % self.date.date()
+                print sess.error, "Story doesn't exist on the given day! (%s)" % self._date.date()
         except AssertionError:
             print sess.error, "Baaah! Couldn't decrypt the story!"
             return

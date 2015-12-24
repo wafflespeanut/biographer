@@ -50,11 +50,11 @@ def change_pass(session, is_arg = False):
         new_key = session.key[:]
         while True:
             try:
-                print sess.warning, "Moving the stories to a working directory (always have some precautions!)...\n"
+                print sess.warning, 'Copying your stories to a temporary working directory (%s)...' % temp_loc
                 shutil.copytree(session.location, temp_loc)
                 session.location = temp_loc
                 break
-            except IOError:
+            except (OSError, IOError):
                 print sess.error, "Couldn't get write access to the path!"
                 while True:
                     working_dir = os.path.expanduser(raw_input('Enter a path to choose as working directory: '))
@@ -64,7 +64,7 @@ def change_pass(session, is_arg = False):
                 temp_loc = os.path.join(working_dir, temp_name)
 
         total = (datetime.now() - session.birthday).days + 1    # accounting the last day
-        for day, n, total, progress in date_iter(session.birthday):
+        for _i, day in date_iter(date_start = session.birthday, progress_msg = '  Processing files: %s'):
             session.key = old_key
             story_old = Story(session, day)
             session.key = new_key
@@ -73,8 +73,6 @@ def change_pass(session, is_arg = False):
                 if story_old.get_path():
                     story_old.decrypt(overwrite = True)     # well, both are working on the same file really!
                     story_new.encrypt(echo = False)
-                sys.stdout.write('\r  Processing files... %d%s (%d/%d days)' % (progress, '%', n, total))
-                sys.stdout.flush()
             except AssertionError:
                 print sess.error, "This file couldn't be decrypted! (filename hash: %s)\
                                    \nResolve it before changing the password again..." % story_old.get_hash()
