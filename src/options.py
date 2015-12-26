@@ -6,7 +6,7 @@ from time import sleep
 
 import session as sess
 from story import Story, hasher
-from utils import date_iter
+from utils import DateIterator
 
 def random(session):    # Useful only when you have a lot of stories (obviously)
     num_days = (datetime.now() - session.birthday).days
@@ -63,8 +63,7 @@ def change_pass(session, is_arg = False):
                     else: break
                 temp_loc = os.path.join(working_dir, temp_name)
 
-        total = (datetime.now() - session.birthday).days + 1    # accounting the last day
-        for _i, day in date_iter(date_start = session.birthday, progress_msg = '  Processing files: %s'):
+        for _i, day in DateIterator(date_start = session.birthday, progress_msg = '  Processing files: %s'):
             session.key = old_key
             story_old = Story(session, day)
             session.key = new_key

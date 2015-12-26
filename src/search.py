@@ -5,11 +5,11 @@ from timeit import default_timer as timer
 
 import session as sess
 from story import Story
-from utils import date_iter, ffi_channel, force_input, get_lang
+from utils import DateIterator, ffi_channel, force_input, get_lang
 
 def build_paths(session, date_start, date_end):
     path_list = []
-    for _i, day in date_iter(date_start, date_end, 'Building the path list... %s'):
+    for _i, day in DateIterator(date_start, date_end, 'Building the path list... %s'):
         file_path = Story(session, day).get_path()
         if file_path:
             path_list.append(file_path)
@@ -36,9 +36,8 @@ def rusty_search(session, date_start, date_end, word):      # FFI for giving the
 def py_search(session, date_start, date_end, word):
     occurrences, errors, no_stories, = [], 0, 0
     start = timer()
-    iterator = date_iter(date_start, date_end, '  Progress: %s', communicate = True)
-    iterator.send(None)
-    for i, day in iterator:
+    date_iter = DateIterator(date_start, date_end)
+    for i, day in date_iter:
         occurred, story = [], Story(session, day)
         try:
             if not story.get_path():
@@ -59,8 +58,8 @@ def py_search(session, date_start, date_end, word):
         if occurred and occurred[0] > 0:    # "i" indicates the Nth day from the birthday
             occurrences.append((i, len(occurred), occurred))
         sum_value = sum(map(lambda stuff: stuff[1], occurrences))
-        iterator.send(' [Found: %d]' % sum_value)
-    assert no_stories < total
+        date_iter.send_msg('[Found: %d]' % sum_value)
+    assert no_stories < (i + 1)
     return occurrences, (timer() - start)
 
 def find_line_boundary(text, idx, limit, direction_value):  # find the closest boundary of text for a given limit

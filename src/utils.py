@@ -9,22 +9,6 @@ prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
 rustlib_path = os.path.join(os.path.dirname(exec_path), 'target', 'release', prefix + 'biographer' + ext)
 
-def date_iter(date_start, date_end = datetime.now(), progress_msg = None, communicate = False):
-    '''Tirelessly provide datetimes along with optional progress display'''
-    total = (date_end - date_start).days + 1      # include the final day
-    print
-    for i in xrange(total):
-        if progress_msg:
-            progress = '%d%% (%d/%d)' % (int((float(i + 1) / total) * 100), i + 1, total)
-            if communicate:     # listen to the caller
-                msg = yield
-                if type(msg) == str:
-                    progress_msg += msg
-            sys.stdout.write('\r%s' % (progress_msg % progress))
-            sys.stdout.flush()
-        yield (i, date_start + timedelta(i))
-    print
-
 def simple_counter(story_data):   # simple word counter (which ignores the timestamps)
     stamp_count = 0
     split_data = story_data.split()
@@ -84,3 +68,39 @@ def get_lang(lang, error, warning):
         print 'Falling back to the default search using Python...'
         lang = 'p'
     return lang
+
+class DateIterator(object):
+    '''Tireless generator to provide datetimes along with optional progress display'''
+    def __init__(self, date_start, date_end = datetime.now(), progress_msg = '  Progress: %s'):
+        self._idx = 0
+        assert type(date_start) is datetime and type(date_end) is datetime, 'expected datetime object for dates!'
+        self._date = date_start
+        self._bound = (date_end - date_start).days + 1      # include the final day
+        # The `progress_msg` string should have a '%s' to indicate where the progress should be printed
+        self._progress_msg = progress_msg
+        self._tail_msg = ''
+        if progress_msg:
+            print   # just to isolate the progress
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        idx, date = self._idx, self._date
+        self._idx += 1
+        self._date += timedelta(1)
+        if self._progress_msg:
+            progress = '%d%% (%d/%d)' % (int((float(idx + 1) / self._bound) * 100), idx, self._bound)
+            sys.stdout.write('\r%s %s' % (self._progress_msg % progress, self._tail_msg))
+            sys.stdout.flush()
+        if self._idx <= self._bound:
+            return (idx, date)
+        else:
+            if self._progress_msg:
+                print
+            raise StopIteration
+
+    def send_msg(self, msg):
+        '''Send a string to the iterator to append it to the progress'''
+        assert type(msg) is str, 'message should be a string!'
+        self._tail_msg = msg
