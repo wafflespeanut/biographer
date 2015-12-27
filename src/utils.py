@@ -45,7 +45,7 @@ def ffi_channel(list_to_send, mode):
     stop = timer()      # Timer ends here, because we don't wanna include Python's parsing time
     return string_result, (stop - start)
 
-def force_input(input_val, input_msg, error, func = lambda s: s):
+def force_input(input_val, input_msg, error, func = lambda f: f):
     # force the user to enter an input (with an optional function to check the given input)
     if not input_val:
         input_val = func(raw_input(input_msg))

@@ -14,16 +14,16 @@ def fmt(color = 'null', dark = False):
     format_code = formats[color] - 60 if dark else formats[color]
     return {'win32': ''}.get(sys.platform, '\033[' + str(format_code) + 'm')
 
-def format_text(text, formatting, dark = False):
-    return fmt(formatting, dark) + text + fmt()
+def fmt_text(text, formatting, dark = False):
+    return '%s%s%s' % (fmt(formatting, dark), text, fmt())
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-error, warning, success = map(lambda s: '\n' + format_text(s, 'bold'),
-                              (format_text('[ERROR]', 'red'),
-                               format_text('[WARNING]', 'yellow', True),
-                               format_text('[SUCCESS]', 'green')))
+error, warning, success = map(lambda s: '\n' + fmt_text(s, 'bold'),
+                              (fmt_text('[ERROR]', 'red'),
+                               fmt_text('[WARNING]', 'yellow', True),
+                               fmt_text('[SUCCESS]', 'green')))
 newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
 capture_wait = (0.1 if sys.platform == 'win32' else 0)
 # the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
@@ -69,7 +69,7 @@ class Session(object):
             self.configure()
 
     def reset(self):
-        self.location, self.key, self.birthday, self.loop = [None] * 4
+        self.location, self.key, self.birthday, self.loop = (None,) * 4
 
     def delete_config_file(self):
         if os.path.exists(self.config_location):

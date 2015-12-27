@@ -31,8 +31,8 @@ def rusty_search(session, date_start, date_end, word):      # FFI for giving the
             occurrences.append((i, len(idx), idx))
     return occurrences, timing
 
-# Exhaustive process (that's why I've written a Rust library for this!)
-# The library accelerates the search time by ~100 times!
+# NOTE: Exhaustive process (that's why I've written a Rust library for this!)
+# The library accelerates the searching time by ~100 times!
 def py_search(session, date_start, date_end, word):
     occurrences, errors, no_stories, = [], 0, 0
     start = timer()
@@ -176,13 +176,13 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 spaces = 40 - len(numbers)
                 print numbers, ' ' * spaces, '[ %s ]' % word_count  # print only the datetime and counts in each file
 
-        print '\n%s %sFound a total of %d occurrences in %d stories!%s\n' % \
-              (sess.success, sess.fmt('yellow'), total_count, num_stories, sess.fmt())
-        print '  %sTime taken for searching: %s%s seconds!%s' % \
-              (sess.fmt('blue'), sess.fmt('green'), timing, sess.fmt())
+        msg = sess.fmt_text('Found a total of %d occurrences in %d stories!' % (total_count, num_stories), 'yellow')
+        print '\n%s %s\n' % (sess.success, msg)
+        print sess.fmt_text('  Time taken for searching: ', 'blue') + \
+              sess.fmt_text('%s seconds!' % timing, 'green')
         if grep:
-            print '  %sTime taken for pretty printing: %s%s seconds!%s' \
-                  % (sess.fmt('blue'), sess.fmt('green'), timer_stop - timer_start, sess.fmt())
+            print sess.fmt_text('  Time taken for pretty printing: ', 'blue') + \
+                  sess.fmt_text('%s seconds!' % (timer_stop - timer_start), 'green')
 
     # Phase 3: Print the results (in a pretty or ugly way) using the giant function below
     jump, num_stories = len(word), len(occurrences)

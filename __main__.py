@@ -5,6 +5,7 @@ from src import session as sess
 from src.args import analyse_args
 from src.options import random, backup, change_pass
 from src.search import search
+from src.stats import stats
 from src.story import Story
 
 if __name__ == '__main__':
@@ -26,7 +27,7 @@ if __name__ == '__main__':
                 6: ("Backup your stories", 'backup(session)'),
                 7: ("Change your password", 'change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
-                # 9: ("View your statistics", 'stats(session)'),
+                9: ("View your statistics", 'stats(session)'),
                 # hidden choice (in case the script somehow quits before encrypting a story)
                 10: ("Encrypt a story", 'Story(session).encrypt()'),
                 0: ("Exit the biographer", '') }

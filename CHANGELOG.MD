@@ -1,6 +1,6 @@
 ### Checklist for next versions:
 
-- [ ] Statistics for stories
+- [x] Statistics for stories
 - [ ] Parallelize searching (and other time-consuming stuff) in Python
 - [ ] Timestamp at the start of every story could compromise the cipher! (Idea: Implement AES in Python & Rust)
 - [ ] Persuade the searching functions to help with pretty printing

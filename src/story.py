@@ -1,5 +1,5 @@
 import os, sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import md5
 from string import punctuation
 from time import sleep
@@ -36,12 +36,14 @@ class Story(object):
     '''
     def __init__(self, session, when = None, is_write = False):
         try:
-            if when == 'today' or when == 'now':
-                self._date = datetime.now()
-            elif type(when) is str:
-                self._date = datetime.strptime(when, '%Y-%m-%d')
-            elif type(when) is datetime:
+            if type(when) is datetime:
                 self._date = when
+            elif when == 'today' or when == 'now':
+                self._date = datetime.now()
+            elif when == 'yesterday':
+                self._date = datetime.now() - timedelta(1)
+            elif type(when) is str:     # this should be at the bottom
+                self._date = datetime.strptime(when, '%Y-%m-%d')
             else:
                 raise ValueError
         except ValueError:
@@ -62,14 +64,14 @@ class Story(object):
         return self._path if os.path.exists(self._path) and os.path.getsize(self._path) else None
 
     # read_data(), write_data(), encrypt() & decrypt() blindly assumes that the file exists
-    # catching for IOErrors every time is rather boring, and so we can utilize get_path() to handle the "absence" case
+    # catching IOErrors every time is rather boring, and so we can utilize get_path() to handle the "absence" case
     def read_data(self):
         with open(self._path, 'rb') as file_data:
             return file_data.read()
 
     def write_data(self, data, mode = 'wb'):
-        with open(self._path, mode) as file:
-            file.write(data)
+        with open(self._path, mode) as file_data:
+            file_data.write(data)
 
     def encrypt(self, echo = True):
         try:    # exhaustive process, just to check whether a file has already been encrypted

@@ -22,7 +22,7 @@ def CBC(mode, data):         # Splits & chains into blocks (for some randomness)
         return ''.join(blocks)
     elif mode == 'd':
         blocks = [data[i:i+size] for i in range(0, len(data), size)]
-        for i in range(1, len(blocks))[::-1]:
+        for i in reversed(range(1, len(blocks))):
             blocks[i] = CXOR(blocks[i - 1], blocks[i])
         data = ''.join(blocks[1:])
         for i in range(BLOCK_SIZE_EXP):
