@@ -26,7 +26,7 @@ def backup(session, backup_loc = None):
     try:
         if not (backup_loc and sess.write_access(os.path.expanduser(backup_loc))):
             backup_loc = '~/Desktop'
-        abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%Y-%m-%d)'))
+        abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%F)'))
         print '\nBacking up to %s...' % abs_path
         shutil.make_archive(abs_path, 'zip', session.location)
     except (KeyboardInterrupt, EOFError):

@@ -8,6 +8,8 @@ from cipher import zombify
 from utils import simple_counter
 import session as sess
 
+REMINDER = '----- You were about to write something at this time? -----'
+
 def get_date():     # global function for getting date from the user in the absence of datetime object
     while True:
         try:
@@ -74,7 +76,7 @@ class Story(object):
             file_data.write(data)
 
     def encrypt(self, echo = True):
-        try:    # exhaustive process, just to check whether a file has already been encrypted
+        try:    # just to check whether a file has already been encrypted (not much overhead for a single file)
             data = self.decrypt()
             print sess.error, "This file looks has already been encrypted! (filename hash: %s)" % self.get_hash(), \
                               "\nIt's never encouraged to use this algorithm for encryption more than once!"
@@ -95,32 +97,56 @@ class Story(object):
             return data
 
     def write(self):
+        '''Write an event to the story'''
         sess.clear_screen()
-        input_loop, keystroke = True, 'Ctrl+C'
+        input_loop, reminder = True, False
+        keystroke = 'Ctrl+C'
         if sys.platform == 'win32':
             print sess.warning, "If you're using the command prompt, don't press %s while writing!" % keystroke
             keystroke = 'Ctrl+Z and [Enter]'
+
+        # Step 1: Pre-writing stuff - check whether the story exists and whether there's a reminder in it, decrypt it!
         if self.get_path():
             try:                    # "Intentionally" decrypting the original file
-                self.decrypt(overwrite = True)  # an easy workaround to modify your original story
+                self.decrypt(overwrite = True)  # an easy workaround to modify your original story using editors
+                prev_data = self.read_data()
+                if prev_data.strip().endswith(REMINDER):     # find the reminder (if any)
+                    while True:
+                        try:
+                            stamp_idx = prev_data.rfind('[')
+                            if stamp_idx == -1: break
+                            time = datetime.strptime(prev_data[stamp_idx:(stamp_idx + 21)], '[%Y-%m-%d] %H:%M:%S')
+                            msg = time.strftime('\n(You were to write something about this day on %B %d, %Y at %R %p)')
+                            reminder = True
+                            break
+                        except ValueError:
+                            continue
+                print '\nStory already exists! Appending to the current story...'
+                print '(filename hash: %s)' % self.get_hash()
+                if reminder:
+                    print sess.fmt_text(msg, 'yellow')
             except AssertionError:
                 print sess.error, "Bleh! Couldn't decrypt today's story! Check your password!"
                 return
-            print '\nStory already exists! Appending to the current story...'
-            print '(filename hash: %s)' % self.get_hash()
-        data = [datetime.now().strftime('[%Y-%m-%d] %H:%M:%S\n')]
-        try:
+
+        try:    # Step 2: Writing the first paragraph...
+            data = [datetime.now().strftime('[%F] %T\n')]
             stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
-to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you're done!)\n\n\t".format(keystroke))
+to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you're done!)\n\n\t" % keystroke)
+            if not stuff:       # quitting on empty return
+                raise KeyboardInterrupt
             data.append(stuff)
-        except (KeyboardInterrupt, EOFError):
+        except (KeyboardInterrupt, EOFError):   # quitting on Ctrl-C
             sleep(sess.capture_wait)
             print "\nAlright, let's save it for a later time then! Quitting..."
             input_loop = False
-            if self.get_path():
-                data = []
-            else:   # If the file doesn't exist (i.e., a new story), then add a reminder for the user
-                data.append('--- You were about to write something at this time? ---')
+            data.append(REMINDER)   # If the user quits before writing, then add a reminder
+
+        # Step 3: Writing loop
+        if input_loop and reminder:     # user has written something at this point, remove the reminder (if any)
+            self.write_data(prev_data[:stamp_idx])
+            # this is necessary, or else we'll ignore the "event" that should be written on top of the reminder
+            reminder = False
         while input_loop:
             try:
                 stuff = raw_input('\t')     # auto-tabbing of paragraphs (for each [RETURN])
@@ -128,13 +154,16 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
             except (KeyboardInterrupt, EOFError):
                 sleep(sess.capture_wait)
                 break
-        if data:
-            self.write_data('\n\t'.join(data) + '\n\n', 'a')
+
+        # Step 4: Write the data to file and encrypt it
+        if not reminder:
+            self.write_data('\n\t'.join(data) + '\n\n', 'a')    # because the user could've written something manually
         self.encrypt(echo = False)
         if input_loop and raw_input(sess.success + ' Successfully written to file! Do you wanna see it (y/n)? ') == 'y':
             self.view()
 
     def view(self, return_text = False):
+        '''View the entire story'''
         date_format = '\nYour story from %s ...\n' % (self._date.strftime('%B %d, %Y (%A)'))
         try:
             if self.get_path():
@@ -147,7 +176,7 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press {} when you'r
         sess.clear_screen()
         count = simple_counter(data)
         start = "%s\n<----- START OF STORY -----> (%d words)\n\n" % \
-                (sess.format_text(sess.format_text(date_format, 'violet'), 'bold'), count)
+                (sess.fmt_text(sess.fmt_text(date_format, 'violet'), 'bold'), count)
         end = "<----- END OF STORY ----->"
         if return_text:
             return (data, start, end)
