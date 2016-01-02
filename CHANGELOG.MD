@@ -1,6 +1,7 @@
 ### Checklist for next versions:
 
 - [x] Statistics for stories
+- [ ] Slow printing!
 - [ ] Parallelize searching (and other time-consuming stuff) in Python
 - [ ] Timestamp at the start of every story could compromise the cipher! (Idea: Implement AES in Python & Rust)
 - [ ] Persuade the searching functions to help with pretty printing
@@ -13,6 +14,8 @@
 
 **[0.6.2]()**: *Biographer*
 - You can now get statistics for your stories!
+- Fixed a major bug that crashes the application at startup (gotta add tests soon!)
+- Improved UX with helpful messages
 
 **[0.6.1](https://github.com/Wafflespeanut/biographer/tree/04fc89a32d6e4607244bde4919bf4975358f13c5)**: *Biographer*
 - Added command-line options for everything - which means you can now invoke writing, viewing, searching or whatever you wanna do, just by passing those as another argument!
@@ -28,7 +31,7 @@
 - Fixed a bug that pops up while using concurrency for searching
 - Search results now show a slice of the output while printing (costs some time while printing the output)
 
-**[0.5.0](https://github.com/Wafflespeanut/biographer/tree/36eba8decfa823b706bb1568c096643b750952a2)**: *Biographer* (stable)
+**[0.5.0](https://github.com/Wafflespeanut/biographer/tree/36eba8decfa823b706bb1568c096643b750952a2)**: *Biographer*
 - Rust library can now be used for searching (without any memory leaks). And, it's damn fast! (by a factor of ~50), even before including *concurrency* (which amplifies the factor further up to <s>~230</s> ~100).
 - Improved the code structure, interface & searching
 - Added a variety of options from changing the password to backing up stories

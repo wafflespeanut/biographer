@@ -9,18 +9,11 @@ from story import Story, hasher
 from utils import DateIterator
 
 def random(session):    # Useful only when you have a lot of stories (obviously)
-    num_days = (datetime.now() - session.birthday).days
-    num_files = len(os.listdir(session.location))
-    if not num_files:
-        print sess.error, "There are no stories in the given location!"
-        return
-    for i in range(num_files):      # try to find a story
-        day = session.birthday + timedelta(rchoice(range(num_days)))
-        story = Story(session, day)
-        if story.get_path():
-            story.view()
-            return
-    print "\nPerhaps, you haven't written many stories?"
+    story_dates = session.find_stories(return_on_first_story = False)
+    if story_dates:
+        story = Story(session, rchoice(story_dates))
+        story.view()
+    print sess.error, 'There are no stories in the given location!'
 
 def backup(session, backup_loc = None):
     try:

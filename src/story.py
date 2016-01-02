@@ -164,7 +164,7 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
 
     def view(self, return_text = False):
         '''View the entire story'''
-        date_format = '\nYour story from %s ...\n' % (self._date.strftime('%B %d, %Y (%A)'))
+        date_format = self._date.strftime('\nYour story from %B %d, %Y (%A) ...\n')
         try:
             if self.get_path():
                 data = self.decrypt()

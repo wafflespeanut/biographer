@@ -5,6 +5,7 @@ from hashlib import sha256
 from time import sleep
 
 from story import Story, hasher
+from utils import DateIterator
 
 formats = {
     'black': 90, 'red': 91, 'green': 92, 'yellow': 93, 'blue': 94, 'violet': 95, 'skyblue': 96, 'white': 97,
@@ -75,7 +76,7 @@ class Session(object):
         if os.path.exists(self.config_location):
             print warning, 'Deleting the configuration file...'
             os.remove(self.config_location)
-            sleep(2)    # wait for the user to see the message (before it gets cleared)
+            raw_input('\nPress [Enter] to continue...')
 
     def get_pass(self, key_hash = None, check_against = None, life_time = 'new'):
         '''A method for getting passwords in three different situations'''
@@ -104,26 +105,55 @@ class Session(object):
             else:
                 print error, "Passwords don't match!"
 
+    def find_stories(self, return_on_first_story = True):
+        if return_on_first_story:
+            for i, date in DateIterator(self.birthday, progress_msg = None):
+                if Story(self, date).get_path():
+                    return (i is 0, date)
+            return False, None
+        return [date for _i, date in DateIterator(self.birthday, progress_msg = None) if Story(self, date).get_path()]
+
     def configure(self):
         '''Configuration for authentication (of course, you have to sign-in for each session!)'''
         try:
             if os.path.exists(self.config_location):
                 print '\nConfiguration file found!'
                 with open(self.config_location, 'r') as file_data:
-                    config = file_data.readlines()
+                    config = file_data.read().splitlines()
                 try:
-                    key_hash, birth = config[0].rstrip('\n'), config[2].rstrip('\n')
-                    self.location = config[1].rstrip(os.sep + '\n') + os.sep
-                    assert os.path.exists(self.location)    # your first story should always exist!
-                    self.birthday = datetime.strptime(birth, '%Y-%m-%d')
-                    # say, you've just created the config file and gone for vacation!
-                    if (datetime.now() - self.birthday).days not in range(3):
-                        assert os.path.exists(self.location + Story(self, birth).get_hash())
+                    assert len(config) >= 3, "there's not enough information in the configuration file!"
+                    key_hash, config_loc, birth = config[:3]
+                    self.location = config_loc.rstrip(os.sep) + os.sep
+                    assert os.path.exists(self.location), "a diary doesn't exist on the configured location!"
+                    try:
+                        self.birthday = datetime.strptime(birth, '%Y-%m-%d')
+                    except ValueError:
+                        raise AssertionError, \
+                              "we can't parse the diary's birthday (expected format: YYYY-MM-DD, found %s)" % birth
                     self.get_pass(key_hash)
-                    assert Story(self, birth).decrypt()     # your password should decrypt the first story
+                    if (datetime.now() - self.birthday).days:   # if you've created your diary more than a day ago...
+                        first_story_exists, date = self.find_stories()
+                        if first_story_exists:
+                            _data = Story(self, birth).decrypt()
+                        elif date:
+                            print error, "Your first story doesn't exist!", \
+                                  date.strftime('However, a story exists on %B %d, %Y (%A)\n')
+                            if raw_input('Do you wanna begin from there (y), or reconfigure your diary (n)? ') == 'y':
+                                self.birthday = date
+                                _data = Story(self, date).decrypt()
+                                self.write_to_config_file()
+                            else:
+                                raise AssertionError, "you asked for it!"
+                        else:
+                            print error, "You haven't written any stories yet!", \
+                                  'Modifying the configuration file to set today as the start...'
+                            self.birthday = datetime.now()
+                            self.write_to_config_file()
+                            raw_input('\nPress [Enter] to continue...')
                     self.loop = True
-                except (AssertionError, IndexError, ValueError):
-                    print error, 'Invalid configuration file!'
+                except AssertionError as err:
+                    reason = err if err.args else "the first story couldn't be decrypted!"
+                    print error, "The configuration file is invalid, because %s" % reason
                     self.reconfigure()
             else:
                 self.reconfigure()
@@ -175,26 +205,42 @@ class Session(object):
                         self.birthday, life_time = datetime.now(), 'new'
                     else:
                         self.birthday, life_time = datetime.strptime(birth, '%Y-%m-%d'), 'old'
-                        if not Story(self, birth).get_path():
-                            print error, "A story doesn't exist on that day! (in the given path)"
+                        first_story_exists, date = self.find_stories()
+                        if first_story_exists:
+                            break
+                        elif date:
+                            print error, "Your 'first' story doesn't exist!", \
+                            date.strftime('However, a story exists on %B %d, %Y (%A)\n')
+                            if raw_input('Do you wanna begin from there (y), or go for another date (n)? ') == 'y':
+                                self.birthday = date
+                                break
                             continue
-                    break
+                        else:
+                            print error, "The story doesn't exist (in the given path) on that day!"
+                            continue
                 except ValueError:
-                    print error, 'Oops! Error in input. Try again...'
+                    print error, 'Oops! Error in input. Check the date format and try again...'
 
             while True:
                 self.get_pass(life_time = life_time)
+                first_story = Story(self, self.birthday)
                 try:
-                    data = Story(self, self.birthday).decrypt()
-                    break
+                    if first_story.get_path():
+                        _data = first_story.decrypt()
+                        break
+                    elif (datetime.now() - self.birthday).days:
+                        raise ValueError
+                    else:   # first-timer...
+                        break
                 except AssertionError:
                     print error, "Couldn't decrypt your 'first' story with the given password! Try again..."
+                except ValueError:
+                    print error, 'Unreachable code!'
 
             self.write_to_config_file()
             self.loop = True
             print "\nIf you plan to reconfigure it manually, then it's located here (%s)" % self.config_location
             print "And, be careful with that, because invalid configuration files will be deleted during startup!"
-            sleep(2)
             raw_input('\nPress [Enter] to continue...')
 
         except (KeyboardInterrupt, EOFError):
