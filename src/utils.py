@@ -9,6 +9,38 @@ prefix = {'win32': ''}.get(sys.platform, 'lib')
 ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
 rustlib_path = os.path.join(os.path.dirname(exec_path), 'target', 'release', prefix + 'biographer' + ext)
 
+formats = {
+    'black': 90, 'red': 91, 'green': 92, 'yellow': 93, 'blue': 94, 'violet': 95, 'skyblue': 96, 'white': 97,
+    'null': 0, 'bold': 1, 'italic': 3, 'underline': 4, 'strike': 9 }
+
+def fmt(color = 'null', dark = False):
+    format_code = formats[color] - 60 if dark else formats[color]
+    return {'win32': ''}.get(sys.platform, '\033[' + str(format_code) + 'm')
+
+def fmt_text(text, formatting, dark = False):
+    return '%s%s%s' % (fmt(formatting, dark), text, fmt())
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+NEWLINE = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
+CAPTURE_WAIT = (0.1 if sys.platform == 'win32' else 0)
+# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
+
+ERROR, WARNING, SUCCESS = map(lambda s: '\n' + fmt_text(s, 'bold'),
+                              (fmt_text('[ERROR]', 'red'),
+                               fmt_text('[WARNING]', 'yellow', True),
+                               fmt_text('[SUCCESS]', 'green')))
+
+def write_access(path):
+    if os.access(path, os.W_OK):
+        return True
+    if not os.path.exists(path):
+        print ERROR, "%s doesn't exist!" % path
+    else:
+        print ERROR, "Couldn't get write access to %s" % path
+    return False
+
 def simple_counter(story_data):   # simple word counter (which ignores the timestamps)
     stamp_count = 0
     split_data = story_data.split()
@@ -54,17 +86,17 @@ def force_input(input_val, input_msg, error, func = lambda f: f):
             input_val = func(raw_input(input_msg))
     return input_val
 
-def get_lang(lang, error, warning):
+def get_lang(lang):
     # get language from user if it's not passsed as a command-line argument
     def check_lang(input_val):
         return 'p' if input_val in ['p', 'py', 'python'] else 'r' if input_val in ['r', 'rs', 'rust'] else None
 
     lang = force_input(check_lang(lang),
                        '\nSearch using Python (or) Rust libarary (py/rs)? ',
-                       error + ' Invalid choice!',
+                       ERROR + ' Invalid choice!',
                        check_lang)
     if lang == 'r' and not os.path.exists(rustlib_path):
-        print warning, "Rust library not found! (Please ensure that it's in the `target/release` folder)"
+        print WARNING, "Rust library not found! (Please ensure that it's in the `target/release` folder)"
         print 'Falling back to the default search using Python...'
         lang = 'p'
     return lang

@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from time import sleep
 from timeit import default_timer as timer
 
-import session as sess
 from story import Story
-from utils import DateIterator, ffi_channel, force_input, get_lang
+from utils import ERROR, SUCCESS, WARNING, CAPTURE_WAIT
+from utils import DateIterator, clear_screen, ffi_channel, fmt, fmt_text, force_input, get_lang
 
 def build_paths(session, date_start, date_end):
     path_list = []
@@ -53,7 +53,7 @@ def py_search(session, date_start, date_end, word):
         except AssertionError:
             errors += 1
             if errors > 10:
-                print sess.error, "More than 10 files couldn't be decrypted! Terminating the search..."
+                print ERROR, "More than 10 files couldn't be decrypted! Terminating the search..."
                 return [], (timer() - start)
         if occurred and occurred[0] > 0:    # "i" indicates the Nth day from the birthday
             occurrences.append((i, len(occurred), occurred))
@@ -74,7 +74,7 @@ def mark_text(text, indices, length, color = 'red'):    # Mark text and return c
     if sys.platform == 'win32':         # damn OS doesn't even support coloring
         return text, indices
     text = list(text)
-    formatter = sess.fmt(color), sess.fmt()
+    formatter = fmt(color), fmt()
     lengths = map(len, formatter)       # we gotta update the indices when we introduce colored text
     i, limit = 0, len(indices)
     new_indices = indices[:]
@@ -92,7 +92,7 @@ def mark_text(text, indices, length, color = 'red'):    # Mark text and return c
 
 def search(session, word = None, lang = None, start = None, end = None, grep = 7):
     '''Invokes one of the searching functions and does some useful stuff'''
-    sess.clear_screen()
+    clear_screen()
     now = datetime.now()
 
     def check_date(date):
@@ -106,13 +106,13 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             return None
 
     # Phase 1: Get the user input required for searching through the stories
-    word = force_input(word, "\nEnter a word: ", sess.error + ' You must enter a word to continue!')
-    lang = get_lang(lang, sess.error, sess.warning)
+    word = force_input(word, "\nEnter a word: ", ERROR + ' You must enter a word to continue!')
+    lang = get_lang(lang)
     start, end = map(check_date, [start, end])
 
     while not all([start, end]):
         try:
-            print sess.warning, 'Enter dates in the form YYYY-MM-DD (Mind you, with hyphen!)\n'
+            print WARNING, 'Enter dates in the form YYYY-MM-DD (Mind you, with hyphen!)\n'
             if not start:
                 lower_bound = session.birthday
                 start_date = raw_input('Start date (Press [Enter] to begin from the start of your diary): ')
@@ -124,14 +124,14 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 end = datetime.strptime(end_date, '%Y-%m-%d') if end_date else now
                 assert (end > lower_bound and end <= now), 'E'
         except AssertionError as msg:
-            print sess.error, '%s date should be after %s and before %s' % \
-                              (msg, lower_bound.strftime('%b. %d, %Y'), now.strftime('%b. %d, %Y'))
+            print ERROR, '%s date should be after %s and before %s' % \
+                         (msg, lower_bound.strftime('%b. %d, %Y'), now.strftime('%b. %d, %Y'))
             if str(msg) == 'S':
                 start = None
             else:
                 end = None
         except ValueError:
-            print sess.error, 'Oops! Error in input. Try again...'
+            print ERROR, 'Oops! Error in input. Try again...'
 
     # Phase 2: Send the datetimes to the respective searching functions
     print "\nSearching your stories for the word '%s'..." % word
@@ -139,7 +139,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
     try:
         occurrences, timing = search_function(session, start, end, word)
     except AssertionError:
-        print sess.error, 'There are no stories in the given location!'
+        print ERROR, 'There are no stories in the given location!'
         return
 
     def print_stuff(grep):      # function to choose between pretty and ugly printing
@@ -163,9 +163,9 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                     print numbers, '\n%s' % '\n'.join(colored)  # print the numbers along with the word occurrences
                 timer_stop = timer()
             except (KeyboardInterrupt, EOFError):
-                sleep(sess.capture_wait)
+                sleep(CAPTURE_WAIT)
                 grep = 0    # default back to ugly printing
-                sess.clear_screen()
+                clear_screen()
                 print "Yep, it takes time! Let's go back to the good ol' days..."
 
         if not grep:    # Yuck, but cleaner way to print the results
@@ -176,21 +176,21 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 spaces = 40 - len(numbers)
                 print numbers, ' ' * spaces, '[ %s ]' % word_count  # print only the datetime and counts in each file
 
-        msg = sess.fmt_text('Found a total of %d occurrences in %d stories!' % (total_count, num_stories), 'yellow')
-        print '\n%s %s\n' % (sess.success, msg)
-        print sess.fmt_text('  Time taken for searching: ', 'blue') + \
-              sess.fmt_text('%s seconds!' % timing, 'green')
+        msg = fmt_text('Found a total of %d occurrences in %d stories!' % (total_count, num_stories), 'yellow')
+        print '\n%s %s\n' % (SUCCESS, msg)
+        print fmt_text('  Time taken for searching: ', 'blue') + \
+              fmt_text('%s seconds!' % timing, 'green')
         if grep:
-            print sess.fmt_text('  Time taken for pretty printing: ', 'blue') + \
-                  sess.fmt_text('%s seconds!' % (timer_stop - timer_start), 'green')
+            print fmt_text('  Time taken for pretty printing: ', 'blue') + \
+                  fmt_text('%s seconds!' % (timer_stop - timer_start), 'green')
 
     # Phase 3: Print the results (in a pretty or ugly way) using the giant function below
     jump, num_stories = len(word), len(occurrences)
     total_count = sum(map(lambda stuff: stuff[1], occurrences))
-    print sess.success, 'Done! Time taken: %s seconds! (%d occurrences in %d stories!)' \
+    print SUCCESS, 'Done! Time taken: %s seconds! (%d occurrences in %d stories!)' \
                    % (timing, total_count, num_stories)
     if not total_count:
-        print sess.error, "Bummer! There are no stories containing '%s'..." % word
+        print ERROR, "Bummer! There are no stories containing '%s'..." % word
         return
     print_stuff(grep)
 
@@ -201,10 +201,10 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
             print "(Enter 'pretty' or 'ugly' to print those search results again, or press [Enter] to exit)"
             ch = raw_input('\nInput: ')
             if ch == 'pretty':
-                sess.clear_screen()
+                clear_screen()
                 print_stuff(grep = 7)       # '7' is default, because it looks kinda nice
             elif ch == 'ugly':
-                sess.clear_screen()
+                clear_screen()
                 print_stuff(grep = 0)
             elif not ch:
                 return
@@ -216,4 +216,4 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 (data, top, bottom) = Story(session, date).view(return_text = True)
                 print top, mark_text(data, indices, jump, 'skyblue')[0], bottom
         except (ValueError, IndexError):
-            print sess.error, 'Oops! Bad input! Try again...'
+            print ERROR, 'Oops! Bad input! Try again...'

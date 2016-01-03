@@ -1,62 +1,33 @@
-import os, sys
+import os
 from datetime import datetime
 from getpass import getpass
 from hashlib import sha256
 from time import sleep
 
 from story import Story, hasher
-from utils import DateIterator
-
-formats = {
-    'black': 90, 'red': 91, 'green': 92, 'yellow': 93, 'blue': 94, 'violet': 95, 'skyblue': 96, 'white': 97,
-    'null': 0, 'bold': 1, 'italic': 3, 'underline': 4, 'strike': 9 }
-
-def fmt(color = 'null', dark = False):
-    format_code = formats[color] - 60 if dark else formats[color]
-    return {'win32': ''}.get(sys.platform, '\033[' + str(format_code) + 'm')
-
-def fmt_text(text, formatting, dark = False):
-    return '%s%s%s' % (fmt(formatting, dark), text, fmt())
-
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-error, warning, success = map(lambda s: '\n' + fmt_text(s, 'bold'),
-                              (fmt_text('[ERROR]', 'red'),
-                               fmt_text('[WARNING]', 'yellow', True),
-                               fmt_text('[SUCCESS]', 'green')))
-newline = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
-capture_wait = (0.1 if sys.platform == 'win32' else 0)
-# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
-
-def write_access(path):
-    if not os.access(path, os.W_OK):
-        if not os.path.exists(path):
-            print error, "%s doesn't exist!" % path
-        else:
-            print error, "Couldn't get write access to %s" % path
-        return False
-    return True
+from utils import CAPTURE_WAIT, ERROR, SUCCESS, WARNING
+from utils import DateIterator, clear_screen, write_access
 
 class Session(object):
     '''
     The 'Session' object has all the information required to carry out the entire session.
-    It has the location of the config file, your diary's location, and your password (among other things)
+    It has the location of the config file, your diary's location, your password, etc.
+    (along with some useful methods)
     '''
     def __init__(self, is_bare = False):
-        self.reset()
+        self._reset()
         path = os.path.expanduser('~')
         try:    # QPython (Android) uses `/data` as home directory, and so let's try with `/mnt/sdcard`
             warn = False
             if not os.access(path, os.W_OK):
-                print error, "Couldn't get write access to home directory! Checking if the device is Android..."
+                print ERROR, "Couldn't get write access to home directory! Checking if the device is Android..."
                 path = '/mnt/sdcard'
                 while not write_access(path):
                     warn = True
                     path = raw_input('\nEnter a path for the config file: ')
             self.config_location = os.path.join(path, '.biographer')
             if warn:
-                print warning, "If you get annoyed by this error and don't wanna do this often," \
+                print WARNING, "If you get annoyed by this ERROR and don't wanna do this often," \
                                + " then move the config file from %s to your home directory (%s)," \
                                + " or just modify the Session object's path to the directory of your liking" \
                                % (self.config_location, os.path.expanduser('~/.biographer'))
@@ -69,12 +40,13 @@ class Session(object):
         if os.access(path, os.W_OK):
             self.configure()
 
-    def reset(self):
+    def _reset(self):
         self.location, self.key, self.birthday, self.loop = (None,) * 4
 
     def delete_config_file(self):
+        '''Delete the configuration file, if it exists'''
         if os.path.exists(self.config_location):
-            print warning, 'Deleting the configuration file...'
+            print WARNING, 'Deleting the configuration file...'
             os.remove(self.config_location)
             raw_input('\nPress [Enter] to continue...')
 
@@ -91,27 +63,33 @@ class Session(object):
                         else:   # so that we don't come back during the future password check
                             check_current_pass = False
                     else:
-                        print error, 'Wrong password!'
+                        print ERROR, 'Wrong password!'
                         continue
             self.key = getpass("\nEnter your '%s' password: " % life_time)
             if check_against and self.key == check_against:
-                print error, 'Both passwords are the same!'
+                print ERROR, 'Both passwords are the same!'
                 continue
             if len(self.key) < 8:
-                print warning, 'Password should be of at least 8 chars!'
+                print WARNING, 'Password should be of at least 8 chars!'
                 continue
             if getpass('Re-enter the %s password: ' % life_time) == self.key:
                 break
             else:
-                print error, "Passwords don't match!"
+                print ERROR, "Passwords don't match!"
 
-    def find_stories(self, return_on_first_story = True):
+    def find_stories(self, date_start = None, return_on_first_story = True):
+        '''
+        Find the dates corresponding to stories that exist in a given location
+        (by default, returns on the first encountered story that exists)
+        '''
+        date_start = date_start if date_start else self.birthday
         if return_on_first_story:
-            for i, date in DateIterator(self.birthday, progress_msg = None):
+            for i, date in DateIterator(date_start, progress_msg = None):
                 if Story(self, date).get_path():
                     return (i is 0, date)
             return False, None
-        return [date for _i, date in DateIterator(self.birthday, progress_msg = None) if Story(self, date).get_path()]
+        # getting the list of stories is an exhaustive process and should be considered as the last resort
+        return [date for _i, date in DateIterator(date_start, progress_msg = None) if Story(self, date).get_path()]
 
     def configure(self):
         '''Configuration for authentication (of course, you have to sign-in for each session!)'''
@@ -136,7 +114,7 @@ class Session(object):
                         if first_story_exists:
                             _data = Story(self, birth).decrypt()
                         elif date:
-                            print error, "Your first story doesn't exist!", \
+                            print ERROR, "Your first story doesn't exist!", \
                                   date.strftime('However, a story exists on %B %d, %Y (%A)\n')
                             if raw_input('Do you wanna begin from there (y), or reconfigure your diary (n)? ') == 'y':
                                 self.birthday = date
@@ -145,7 +123,7 @@ class Session(object):
                             else:
                                 raise AssertionError, "you asked for it!"
                         else:
-                            print error, "You haven't written any stories yet!", \
+                            print ERROR, "You haven't written any stories yet!", \
                                   'Modifying the configuration file to set today as the start...'
                             self.birthday = datetime.now()
                             self.write_to_config_file()
@@ -153,14 +131,14 @@ class Session(object):
                     self.loop = True
                 except AssertionError as err:
                     reason = err if err.args else "the first story couldn't be decrypted!"
-                    print error, "The configuration file is invalid, because %s" % reason
+                    print ERROR, "The configuration file is invalid, because %s" % reason
                     self.reconfigure()
             else:
                 self.reconfigure()
         except (KeyboardInterrupt, EOFError):
-            sleep(capture_wait)
-            print '\n', error, 'Failed to authenticate!'
-            self.reset()
+            sleep(CAPTURE_WAIT)
+            print '\n', ERROR, 'Failed to authenticate!'
+            self._reset()
 
     def write_to_config_file(self):
         '''
@@ -174,16 +152,16 @@ class Session(object):
             file_data.write('\n'.join([hasher(sha256, self.key),
                                        self.location,
                                        self.birthday.strftime('%F')]))
-        print success, msg
+        print SUCCESS, msg
 
     def reconfigure(self):      # FIXME: Could take arguments via command-line?
         '''Reset the diary's configuration'''
         try:
-            self.reset()
+            self._reset()
             self.delete_config_file()
             clear_screen()
-            print "\nLet's start configuring your diary...\n" + \
-                  '\nEnter the location for your diary...' + \
+            print "\nLet's start configuring your diary...\n", \
+                  '\nEnter the location for your diary...', \
                   "\n(Note that this will create a foler named 'Diary' if the path doesn't end with it)"
             self.location = os.path.expanduser(raw_input('\nPath: '))
             while not write_access(self.location):
@@ -200,26 +178,26 @@ class Session(object):
                     birth = raw_input('''\
                                       \nWhen did you start writing this diary? (Press [Enter] for today)\
                                       \nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
-                                      \nDate: ''')
+                                      \nDate: ''')      # FIXME: just ask the year and 'infer' from the location
                     if not birth:
                         self.birthday, life_time = datetime.now(), 'new'
+                        break
                     else:
                         self.birthday, life_time = datetime.strptime(birth, '%Y-%m-%d'), 'old'
                         first_story_exists, date = self.find_stories()
                         if first_story_exists:
                             break
                         elif date:
-                            print error, "Your 'first' story doesn't exist!", \
+                            print ERROR, "Your 'first' story doesn't exist!", \
                             date.strftime('However, a story exists on %B %d, %Y (%A)\n')
                             if raw_input('Do you wanna begin from there (y), or go for another date (n)? ') == 'y':
                                 self.birthday = date
                                 break
-                            continue
                         else:
-                            print error, "The story doesn't exist (in the given path) on that day!"
-                            continue
+                            print ERROR, "A story doesn't exist (in the given path) on that day!"
+                        continue
                 except ValueError:
-                    print error, 'Oops! Error in input. Check the date format and try again...'
+                    print ERROR, 'Oops! ERROR in input. Check the date format and try again...'
 
             while True:
                 self.get_pass(life_time = life_time)
@@ -229,13 +207,12 @@ class Session(object):
                         _data = first_story.decrypt()
                         break
                     elif (datetime.now() - self.birthday).days:
-                        raise ValueError
+                        # 'unreachable' because this should've already been handled
+                        raise Exception, 'Entered unreachable code!'
                     else:   # first-timer...
                         break
                 except AssertionError:
-                    print error, "Couldn't decrypt your 'first' story with the given password! Try again..."
-                except ValueError:
-                    print error, 'Unreachable code!'
+                    print ERROR, "Couldn't decrypt your 'first' story with the given password! Try again..."
 
             self.write_to_config_file()
             self.loop = True
@@ -244,9 +221,9 @@ class Session(object):
             raw_input('\nPress [Enter] to continue...')
 
         except (KeyboardInterrupt, EOFError):
-            sleep(capture_wait)
+            sleep(CAPTURE_WAIT)
             if not all([self.location, self.key, self.birthday, self.loop]):
-                print '\n', error, "Failed to store the login credentials!"
+                print '\n', ERROR, "Failed to store the login credentials!"
                 if os.path.exists(self.config_location):
                     os.remove(self.config_location)
-                self.reset()
+                self._reset()

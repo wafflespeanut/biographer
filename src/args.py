@@ -1,10 +1,11 @@
 from time import sleep
 
-import session as sess
 from options import backup, change_pass, random
 from search import search
+from session import Session
 from stats import stats
 from story import Story
+from utils import CAPTURE_WAIT, ERROR, clear_screen
 
 help_string = '''
 USAGE: python /path/to/biographer [OPTIONS]
@@ -42,12 +43,12 @@ search [=word]  Search for a given word (with optional arguments)
                   (size of the region to print)
 '''
 
-help_string = '\n  '.join(help_string.split('\n'))
+help_string = '\n  '.join(help_string.split('\n'))      # FIXME: this should be a decorator
 
 def create_session():
-    session = sess.Session()
+    session = Session()
     if session.loop:
-        sess.clear_screen()
+        clear_screen()
         return session
     exit('\nGoodbye...\n')
 
@@ -66,7 +67,7 @@ def analyse_args(args):
     allowed_opts = {
         # these don't take any value, and don't respond if an invalid value is passed
         'help': 'print (help_string)',
-        'configure': 'sess.Session(is_bare = True).reconfigure()',
+        'configure': 'Session(is_bare = True).reconfigure()',
         'change-pass': 'change_pass(create_session(), is_arg = True)',
         'random': 'random(create_session())',
         # these demand one value (`backup` requires a valid location, while the other three require a datetime format)
@@ -97,8 +98,8 @@ def analyse_args(args):
             exec(allowed_opts[option])
         exit('')
     except KeyError:
-        print sess.error, 'Invalid arguments! Continuing with the default...'
+        print ERROR, 'Invalid arguments! Continuing with the default...'
         return create_session()
     except (KeyboardInterrupt, EOFError):
-        sleep(sess.capture_wait)
+        sleep(CAPTURE_WAIT)
         exit('\nGoodbye...\n')

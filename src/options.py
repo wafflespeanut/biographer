@@ -1,39 +1,43 @@
-import os, sys, shutil
+import os, shutil
 from datetime import datetime, timedelta
 from hashlib import sha256
 from random import random as randgen, choice as rchoice
 from time import sleep
 
-import session as sess
 from story import Story, hasher
-from utils import DateIterator
+from utils import ERROR, SUCCESS, WARNING
+from utils import DateIterator, clear_screen, write_access
 
-def random(session):    # Useful only when you have a lot of stories (obviously)
-    story_dates = session.find_stories(return_on_first_story = False)
-    if story_dates:
-        story = Story(session, rchoice(story_dates))
-        story.view()
-    print sess.error, 'There are no stories in the given location!'
+def random(session):    # useful only when you have a lot of stories (obviously)
+    days = range((datetime.now() - session.birthday).days + 1)
+    for i in range(10):     # try 10 times
+        _story_exists, date = session.find_stories(session.birthday + timedelta(rchoice(days)))
+        if not date:
+            break
+        story = Story(session, date)
+        if story.get_path():
+            return story.view()
+    print ERROR, 'Looks like there are no stories in the given location!'
 
 def backup(session, backup_loc = None):
     try:
-        if not (backup_loc and sess.write_access(os.path.expanduser(backup_loc))):
+        if not (backup_loc and write_access(os.path.expanduser(backup_loc))):
             backup_loc = '~/Desktop'
         abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%F)'))
         print '\nBacking up to %s...' % abs_path
         shutil.make_archive(abs_path, 'zip', session.location)
     except (KeyboardInterrupt, EOFError):
-        sleep(sess.capture_wait)
-        print sess.error, 'Interrupted!'
+        sleep(CAPTURE_WAIT)
+        print ERROR, 'Interrupted!'
         if os.path.exists(abs_path + '.zip'):
             os.remove(abs_path + '.zip')
 
 def change_pass(session, is_arg = False):
-    sess.clear_screen()
+    clear_screen()
     old_key, old_loc = session.key[:], session.location[:]
 
     try:
-        assert sess.write_access(session.location)
+        assert write_access(session.location)
         print "\nLet's change your password..."
         temp_name = 'BIOGRAPHER_' + str(randgen())[2:]
         temp_loc = os.path.join(os.path.dirname(session.location.rstrip(os.sep)), temp_name)
@@ -43,16 +47,16 @@ def change_pass(session, is_arg = False):
         new_key = session.key[:]
         while True:
             try:
-                print sess.warning, 'Copying your stories to a temporary working directory (%s)...' % temp_loc
+                print WARNING, 'Copying your stories to a temporary working directory (%s)...' % temp_loc
                 shutil.copytree(session.location, temp_loc)
                 session.location = temp_loc
                 break
-            except (OSError, IOError):
-                print sess.error, "Couldn't get write access to the path!"
+            except (IOError, OSError):
+                print ERROR, "Couldn't get write access to the path!"
                 while True:
                     working_dir = os.path.expanduser(raw_input('Enter a path to choose as working directory: '))
                     if old_loc.rstrip(os.sep) == os.path.dirname(working_dir.rstrip(os.sep)):
-                        print sess.error, "Working directory shouldn't share the location of your stories!"
+                        print ERROR, "Working directory shouldn't share the location of your stories!"
                     else: break
                 temp_loc = os.path.join(working_dir, temp_name)
 
@@ -66,16 +70,16 @@ def change_pass(session, is_arg = False):
                     story_old.decrypt(overwrite = True)     # well, both are working on the same file really!
                     story_new.encrypt(echo = False)
             except AssertionError:
-                print sess.error, "This file couldn't be decrypted! (filename hash: %s)\
-                                   \nResolve it before changing the password again..." % story_old.get_hash()
+                print ERROR, "This file couldn't be decrypted! (filename hash: %s)" % story_old.get_hash(), \
+                      "\nResolve it before changing the password again..."
                 raise AssertionError
 
     except (AssertionError, KeyboardInterrupt, EOFError):
         session.key, session.location = old_key, old_loc
-        sleep(sess.capture_wait)
+        sleep(CAPTURE_WAIT)
         if os.path.exists(temp_loc):
             shutil.rmtree(temp_loc)
-        print sess.error, 'Interrupted! Failed to change the password!'
+        print ERROR, 'Interrupted! Failed to change the password!'
         return
 
     shutil.rmtree(old_loc)
@@ -84,4 +88,4 @@ def change_pass(session, is_arg = False):
     os.rename(temp_loc, old_loc)
     print 'Modifying the configuration file...'
     session.write_to_config_file()
-    print sess.success, 'Password has been changed!'
+    print SUCCESS, 'Password has been changed!'
