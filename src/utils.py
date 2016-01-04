@@ -1,5 +1,6 @@
 import inspect, os, sys, ctypes
 from datetime import datetime, timedelta
+from time import sleep
 from timeit import default_timer as timer
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
@@ -26,6 +27,7 @@ def clear_screen():
 NEWLINE = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
 CAPTURE_WAIT = (0.1 if sys.platform == 'win32' else 0)
 # the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
+STDOUT = sys.stdout
 
 ERROR, WARNING, SUCCESS = map(lambda s: '\n' + fmt_text(s, 'bold'),
                               (fmt_text('[ERROR]', 'red'),
@@ -53,8 +55,7 @@ def simple_counter(story_data):   # simple word counter (which ignores the times
                 pass
     return len(split_data) - stamp_count
 
-# You'll be needing the Nightly rust for compiling the library
-# because the library depends on a future method and a deprecated method
+# NOTE: You'll be needing the Nightly rust for compiling the library
 
 # Currently, mode is one of the following:
 # 0     =>  Statistics
@@ -77,7 +78,7 @@ def ffi_channel(list_to_send, mode):
     stop = timer()      # Timer ends here, because we don't wanna include Python's parsing time
     return string_result, (stop - start)
 
-def force_input(input_val, input_msg, error, func = lambda f: f):
+def force_input(input_val, input_msg, error, func = lambda s: s):
     # force the user to enter an input (with an optional function to check the given input)
     if not input_val:
         input_val = func(raw_input(input_msg))
@@ -123,8 +124,8 @@ class DateIterator(object):
         self._date += timedelta(1)
         if self._progress_msg:
             progress = '%d%% (%d/%d)' % (int((float(idx + 1) / self._bound) * 100), idx, self._bound)
-            sys.stdout.write('\r%s %s' % (self._progress_msg % progress, self._tail_msg))
-            sys.stdout.flush()
+            STDOUT.write('\r%s %s' % (self._progress_msg % progress, self._tail_msg))
+            STDOUT.flush()
         if self._idx <= self._bound:
             return (idx, date)
         else:
@@ -136,3 +137,34 @@ class DateIterator(object):
         '''Send a string to the iterator to append it to the progress'''
         assert type(msg) is str, 'message should be a string!'
         self._tail_msg = msg
+
+class SlowPrinter(object):
+    '''
+    Custom writer for displaying stuff through stdout (basically, an override for `print`)
+    It supports four modes - normal (0), char-by-char (1), word-by-word (2), and line-by-line (3).
+    The latter three optionally take a sleep timeout, which is the interval between two subsequent writes
+    '''
+    def __init__(self, mode = 0, sleep = 0.01):
+        self._writer = { 1: self._piece_by_piece,
+                         2: self._word_by_word,
+                         3: self._line_by_line, }.get(mode, self._normal_mode)
+        self._sleep = sleep
+
+    def _normal_mode(self, string):
+        STDOUT.write(string)
+        STDOUT.flush()
+
+    def _piece_by_piece(self, string):
+        for s in string:
+            STDOUT.write(s)
+            STDOUT.flush()
+            sleep(self._sleep)
+
+    def _line_by_line(self, string):
+        self._piece_by_piece(string.splitlines(True))
+
+    def _word_by_word(self, string):
+        self._piece_by_piece((s + ' ' for s in string.split(' ')))
+
+    def write(self, string):
+        self._writer(string)

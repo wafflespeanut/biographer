@@ -5,8 +5,8 @@ from random import random as randgen, choice as rchoice
 from time import sleep
 
 from story import Story, hasher
-from utils import ERROR, SUCCESS, WARNING
-from utils import DateIterator, clear_screen, write_access
+from utils import CAPTURE_WAIT, ERROR, SUCCESS, WARNING
+from utils import DateIterator, SlowPrinter, clear_screen, write_access
 
 def random(session):    # useful only when you have a lot of stories (obviously)
     days = range((datetime.now() - session.birthday).days + 1)

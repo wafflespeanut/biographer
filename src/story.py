@@ -5,7 +5,7 @@ from time import sleep
 
 from cipher import zombify
 from utils import CAPTURE_WAIT, ERROR, NEWLINE, SUCCESS, WARNING
-from utils import clear_screen, fmt_text, simple_counter
+from utils import SlowPrinter, clear_screen, fmt_text, simple_counter
 
 REMINDER = '----- You were about to write something at this time? -----'
 
@@ -109,6 +109,7 @@ class Story(object):
         clear_screen()
         input_loop, reminder = True, False
         keystroke = 'Ctrl+C'
+        sys.stdout = SlowPrinter(2, 0.03)
         if sys.platform == 'win32':
             print WARNING, "If you're using the command prompt, don't press %s while writing!" % keystroke
             keystroke = 'Ctrl+Z and [Enter]'
@@ -188,4 +189,5 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
         end = "<----- END OF STORY ----->"
         if return_text:
             return (data, start, end)
+        sys.stdout = SlowPrinter(2, 0.02)
         print start, data, end

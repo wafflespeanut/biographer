@@ -176,9 +176,9 @@ class Session(object):
             while True:
                 try:    # 'birthday' of the diary is important because random stories and searching is based on that
                     birth = raw_input('''\
-                                      \nWhen did you start writing this diary? (Press [Enter] for today)\
-                                      \nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
-                                      \nDate: ''')      # FIXME: just ask the year and 'infer' from the location
+\nWhen did you start writing this diary? (Press [Enter] for today)\
+\nDate should be of the form YYYY-MM-DD (Mind you, with hyphen!)
+\nDate: ''')      # FIXME: just ask the year and 'infer' from the location
                     if not birth:
                         self.birthday, life_time = datetime.now(), 'new'
                         break

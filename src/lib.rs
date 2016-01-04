@@ -14,7 +14,7 @@ use std::sync::mpsc;
 use std::{str, slice, thread};
 use libc::{size_t, c_char, c_uint};
 
-// You'll be needing Nightly rust, because `from_ptr` for C-types is unstable and deprecated
+// NOTE: You'll be needing the Nightly Rust for compiling this library
 
 #[no_mangle]
 // FFI function just to kill a transferred pointer
