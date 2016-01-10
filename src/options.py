@@ -6,7 +6,7 @@ from time import sleep
 
 from story import Story, hasher
 from utils import CAPTURE_WAIT, ERROR, SUCCESS, WARNING
-from utils import DateIterator, SlowPrinter, clear_screen, write_access
+from utils import DateIterator, clear_screen, write_access
 
 def random(session):    # useful only when you have a lot of stories (obviously)
     days = range((datetime.now() - session.birthday).days + 1)
@@ -23,7 +23,7 @@ def backup(session, backup_loc = None):
     try:
         if not (backup_loc and write_access(os.path.expanduser(backup_loc))):
             backup_loc = '~/Desktop'
-        abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%F)'))
+        abs_path = os.path.join(os.path.expanduser(backup_loc), datetime.now().strftime('My Diary (%Y-%m-%d)'))
         print '\nBacking up to %s...' % abs_path
         shutil.make_archive(abs_path, 'zip', session.location)
     except (KeyboardInterrupt, EOFError):

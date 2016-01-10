@@ -141,16 +141,13 @@ class DateIterator(object):
 class SlowPrinter(object):
     '''
     Custom writer for displaying stuff through stdout (basically, an override for `print`)
-    It supports four modes - normal (0), char-by-char (1), word-by-word (2), and line-by-line (3).
+    It supports four modes - default (0), char-by-char (1), word-by-word (2), and line-by-line (3).
     The latter three optionally take a sleep timeout, which is the interval between two subsequent writes
     '''
-    def __init__(self, mode = 0, sleep = 0.01):
-        self._writer = { 1: self._piece_by_piece,
-                         2: self._word_by_word,
-                         3: self._line_by_line, }.get(mode, self._normal_mode)
-        self._sleep = sleep
+    def __init__(self):
+        self._writer = self._stdout
 
-    def _normal_mode(self, string):
+    def _stdout(self, string):
         STDOUT.write(string)
         STDOUT.flush()
 
@@ -164,7 +161,13 @@ class SlowPrinter(object):
         self._piece_by_piece(string.splitlines(True))
 
     def _word_by_word(self, string):
-        self._piece_by_piece((s + ' ' for s in string.split(' ')))
+        self._piece_by_piece((' ' + s if i > 0 else s for i, s in enumerate(string.split(' '))))
+
+    def set_mode(self, mode = 0, sleep = 0.02):
+        self._writer = { 1: self._piece_by_piece,
+                         2: self._word_by_word,
+                         3: self._line_by_line, }.get(mode, self._stdout)
+        self._sleep = sleep
 
     def write(self, string):
         self._writer(string)

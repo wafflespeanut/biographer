@@ -151,7 +151,7 @@ class Session(object):
         with open(self.config_location, 'w') as file_data:
             file_data.write('\n'.join([hasher(sha256, self.key),
                                        self.location,
-                                       self.birthday.strftime('%F')]))
+                                       self.birthday.strftime('%Y-%m-%d')]))
         print SUCCESS, msg
 
     def reconfigure(self):      # FIXME: Could take arguments via command-line?

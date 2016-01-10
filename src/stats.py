@@ -38,9 +38,8 @@ def time_calc(secs_float):
     figures = secs_float - secs_int     # to get the float part (if any)
     time_vals = [secs_int]
     for _, factor in units:
-        prev_val, cur_val = time_vals[-1] % factor, time_vals[-1] / factor
-        time_vals[-1] = prev_val
-        time_vals.append(cur_val)
+        time_vals.append(time_vals[-1] / factor)
+        time_vals[-2] %= factor
     if figures:
         time_vals[1] += round(figures, 2)   # we can safely neglect the first value, since that's '0'
     return ', '.join(map(lambda (i, val): '%s %s' % (val, units[i][0]) + ('' if val == 1 else 's'),  # ehm, plural

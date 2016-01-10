@@ -8,15 +8,15 @@ from src.stats import stats
 from src.story import Story
 from src.utils import CAPTURE_WAIT, ERROR, SlowPrinter, clear_screen
 
-sys.stdout = SlowPrinter(1, 0.025)
-
 if __name__ == '__main__':
+    sys.stdout = SlowPrinter()      # hack for printing at variety of rates at certain code points
+    sys.stdout.set_mode(1)
     _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
     session = analyse_args(args)
 
     while session.loop:     # Main loop (there are a hell lot of `try...except`s for smoother experience)
         try:
-            sys.stdout = SlowPrinter(3, 0.03)
+            sys.stdout.set_mode(3, 0.03)
             print '\n  (Press Ctrl-C to get back to the main menu any time!)'
             if 'linux' not in sys.platform:
                 print '\n  ### This program runs best on Linux terminal ###'
@@ -36,7 +36,7 @@ if __name__ == '__main__':
                 print '%s%d. %s' % (' ' * 6, i, choices[i][0])
 
             try:
-                sys.stdout = SlowPrinter(1, 0.02)
+                sys.stdout.set_mode(1)
                 ch = raw_input('\n  (Press [Enter] to exit)\n\nChoice: ')
                 if not ch:
                     session.loop = False

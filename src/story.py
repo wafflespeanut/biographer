@@ -5,7 +5,7 @@ from time import sleep
 
 from cipher import zombify
 from utils import CAPTURE_WAIT, ERROR, NEWLINE, SUCCESS, WARNING
-from utils import SlowPrinter, clear_screen, fmt_text, simple_counter
+from utils import clear_screen, fmt_text, simple_counter
 
 REMINDER = '----- You were about to write something at this time? -----'
 
@@ -109,7 +109,7 @@ class Story(object):
         clear_screen()
         input_loop, reminder = True, False
         keystroke = 'Ctrl+C'
-        sys.stdout = SlowPrinter(2, 0.03)
+        sys.stdout.set_mode(2, 0.03)
         if sys.platform == 'win32':
             print WARNING, "If you're using the command prompt, don't press %s while writing!" % keystroke
             keystroke = 'Ctrl+Z and [Enter]'
@@ -125,7 +125,8 @@ class Story(object):
                             stamp_idx = prev_data.rfind('[')
                             if stamp_idx == -1: break
                             time = datetime.strptime(prev_data[stamp_idx:(stamp_idx + 21)], '[%Y-%m-%d] %H:%M:%S')
-                            msg = time.strftime('\n(You were to write something about this day on %B %d, %Y at %r)')
+                            raw_msg = '\n(You were to write something about this day on %B %d, %Y at %l:%M:%S %p)'
+                            msg = time.strftime(raw_msg)
                             reminder = True
                             break
                         except ValueError:
@@ -139,7 +140,7 @@ class Story(object):
                 return
 
         try:    # Step 2: Writing the first paragraph...
-            data = [datetime.now().strftime('[%F] %T\n')]
+            data = [datetime.now().strftime('[%Y-%m-%d] %H:%M:%S\n')]
             stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
 to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you're done!)\n\n\t" % keystroke)
             if not stuff:       # quitting on empty return
@@ -189,5 +190,5 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
         end = "<----- END OF STORY ----->"
         if return_text:
             return (data, start, end)
-        sys.stdout = SlowPrinter(2, 0.02)
+        sys.stdout.set_mode(2)
         print start, data, end

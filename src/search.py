@@ -5,7 +5,7 @@ from timeit import default_timer as timer
 
 from story import Story
 from utils import ERROR, SUCCESS, WARNING, CAPTURE_WAIT
-from utils import DateIterator, SlowPrinter, clear_screen, ffi_channel, fmt, fmt_text, force_input, get_lang
+from utils import DateIterator, clear_screen, ffi_channel, fmt, fmt_text, force_input, get_lang
 
 def build_paths(session, date_start, date_end):
     path_list = []
@@ -105,7 +105,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
         except (TypeError, ValueError):
             return None
 
-    sys.stdout = SlowPrinter(1, 0.015)
+    sys.stdout.set_mode(1, 0.01)
     # Phase 1: Get the user input required for searching through the stories
     word = force_input(word, "\nEnter a word: ", ERROR + ' You must enter a word to continue!')
     lang = get_lang(lang)
@@ -144,7 +144,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
         return
 
     def print_stuff(grep):      # function to choose between pretty and ugly printing
-        sys.stdout = SlowPrinter(0)
+        sys.stdout.set_mode(0)
         results_begin = '\nSearch results from %s to %s:' % (start.strftime('%B %d, %Y'), end.strftime('%B %d, %Y')) + \
                         "\n\nStories on these days have the word '%s' in them...\n" % word
         if grep:    # pretty printing the output (at the cost of decrypting time)
@@ -171,7 +171,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 print "Yep, it takes time! Let's go back to the good ol' days..."
 
         if not grep:    # Yuck, but cleaner way to print the results
-            sys.stdout = SlowPrinter(0)
+            sys.stdout.set_mode(0)
             print results_begin
             for i, (n, word_count, _indices) in enumerate(occurrences):
                 date = session.birthday + timedelta(n)
@@ -179,7 +179,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 spaces = 40 - len(numbers)
                 print numbers, ' ' * spaces, '[ %s ]' % word_count  # print only the datetime and counts in each file
 
-        sys.stdout = SlowPrinter(1, 0.015)
+        sys.stdout.set_mode(1, 0.015)
         msg = fmt_text('Found a total of %d occurrences in %d stories!' % (total_count, num_stories), 'yellow')
         print '\n%s %s\n' % (SUCCESS, msg)
         print fmt_text('  Time taken for searching: ', 'blue') + \
@@ -201,10 +201,10 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
     # Phase 4: Get the user input and display the stories
     while occurrences:
         try:
-            sys.stdout = SlowPrinter(2, 0.02)
+            sys.stdout.set_mode(2)
             print '\nEnter a number to see the corresponding story...'
             print "\r(Enter 'pretty' or 'ugly' to print those search results again, or press [Enter] to exit)"
-            ch = raw_input('\nInput:')
+            ch = raw_input('\nInput: ')
             if ch == 'pretty':
                 clear_screen()
                 print_stuff(grep = 7)       # '7' is default, because it looks kinda nice
@@ -219,7 +219,7 @@ def search(session, word = None, lang = None, start = None, end = None, grep = 7
                 n_day, word_count, indices = occurrences[int(ch) - 1]
                 date = start + timedelta(n_day)
                 (data, top, bottom) = Story(session, date).view(return_text = True)
-                sys.stdout = SlowPrinter(3, 0.02)
+                sys.stdout.set_mode(3)
                 print top, mark_text(data, indices, jump, 'skyblue')[0], bottom
         except (ValueError, IndexError):
             print ERROR, 'Oops! Bad input! Try again...'
