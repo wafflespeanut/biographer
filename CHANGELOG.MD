@@ -16,6 +16,7 @@
 - You can now get statistics for your stories!
 - Fixed a major bug that crashes the application at startup (gotta add tests soon!)
 - Improved UX with helpful messages
+- Parallelized the Rust searching (which was previously concurrent)
 
 **[0.6.1](https://github.com/Wafflespeanut/biographer/tree/04fc89a32d6e4607244bde4919bf4975358f13c5)**: *Biographer*
 - Added command-line options for everything - which means you can now invoke writing, viewing, searching or whatever you wanna do, just by passing those as another argument!

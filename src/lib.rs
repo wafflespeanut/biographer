@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 extern crate libc;
 extern crate rand as random;
@@ -10,9 +10,11 @@ use cipher::{Mode, zombify};
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::Read;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::{str, slice, thread};
 use libc::{size_t, c_char, c_uint};
+
+const NUM_JOBS: usize = 4;
 
 // NOTE: You'll be needing the Nightly Rust for compiling this library
 
@@ -44,13 +46,13 @@ pub extern fn get_stuff(array: *const *const c_char,
 
     // (I've commented out some of the methods I'd tried)
     //
-    // // pure iteration (decreases the time by a factor of 50 ± 10)
+    // // M1: pure iteration (decreases the time by a factor of 50 ± 10)
     // let occurrences = stuff
     //                   .iter()
     //                   .map(|file_name| count_words(&file_name, &key, &word))
     //                   .collect::<Vec<String>>();
 
-    // // basic concurrency using threads (decreases the time by a factor of 65 ± 10)
+    // // M2: spawn threads (decreases the time by a factor of 65 ± 10)
     // let threads: Vec<_> = stuff
     //                       .into_iter()
     //                       .enumerate()
@@ -62,28 +64,60 @@ pub extern fn get_stuff(array: *const *const c_char,
     //                          .map(|handle| handle.join().unwrap())
     //                          .collect();
 
-    // channels show more or less the same performance (decrease the time by a factor of 80 ± 10)
+    // // M3: spawn threads and use channels (decreases the time by a factor of 80 ± 10)
+    // let (tx, rx) = mpsc::channel();
+    // let threads: Vec<_> = stuff
+    //                       .into_iter()
+    //                       .enumerate()
+    //                       .map(|(idx, file_name)| {
+    //                           let tx = tx.clone();
+    //                           thread::spawn(move || {
+    //                               tx.send((idx, count_words(&file_name, &key, word))).unwrap()
+    //                           })
+    //                       }).collect();
+    // let mut result: Vec<(usize, String)> = threads
+    //                                        .iter()
+    //                                        .map(|_| rx.recv().unwrap())
+    //                                        .collect();
+
+    // M4: parallelization using channels (decreases the time by a factor of 100 ± 10)
+    let mut handles = vec!();
     let (tx, rx) = mpsc::channel();
-    let threads: Vec<_> = stuff
-                          .into_iter()
-                          .enumerate()
-                          .map(|(idx, file_name)| {
-                              let tx = tx.clone();
-                              thread::spawn(move || {
-                                  tx.send((idx, count_words(&file_name, &key, word))).unwrap()
-                              })
-                          }).collect();
-    let mut result: Vec<(usize, String)> = threads
-                                           .iter()
-                                           .map(|_| rx.recv().unwrap())
+    let stuff_per_chunk = stuff.len() / NUM_JOBS;
+    let extra = stuff.len() % NUM_JOBS;
+    let mut start_idx = 0;
+    let arc_stuff = Arc::new(stuff);
+
+    for thread_idx in 0..NUM_JOBS {
+        let stuff = arc_stuff.clone();
+        let slice_size = match thread_idx < extra {
+            true => stuff_per_chunk + 1,
+            false => stuff_per_chunk,
+        };
+        let end_idx = start_idx + slice_size;
+        let sender = tx.clone();
+        let handle = thread::spawn(move || {
+            let thread_stuff = stuff[start_idx..end_idx]
+                               .iter()
+                               .map(|&file_name| (start_idx, count_words(file_name, &key, word)))
+                               .collect::<Vec<_>>();
+            sender.send(thread_stuff)
+        });
+        start_idx += slice_size;
+        handles.push(handle);
+    }
+
+    let mut result: Vec<(usize, String)> = handles
+                                           .into_iter()
+                                           .flat_map(|_| rx.recv().unwrap().into_iter())
                                            .collect();
 
     // sorting and remapping is necessary for output from threads (because they come in randomly)
     result.sort_by(|&(idx_1, _), &(idx_2, _)| idx_1.cmp(&idx_2));
-    let occurrences: Vec<String> = result
-                                   .iter()
-                                   .map(|&(_, ref string)| string.clone())
-                                   .collect();
+    let occurrences: Vec<_> = result
+                              .into_iter()
+                              .map(|(_, string)| string)
+                              .collect();
 
     let count_string = occurrences.join(" ");
     CString::new(count_string).unwrap().into_raw()      // FFI "should" now own the memory
