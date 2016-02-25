@@ -35,7 +35,7 @@ class Story(object):
     For example, one can get its filename hash, the data contained in it,
     tell whether it should be encrypted or decrypted, whether it's new, etc.
     '''
-    def __init__(self, session, when = None, is_write = False):
+    def __init__(self, session, when = None, is_write = False, check_path = False):
         try:
             if type(when) is datetime:
                 self._date = when
@@ -56,6 +56,8 @@ class Story(object):
             session.write_to_config_file()
             sleep(1)
         self._path = os.path.join(session.location, self.get_hash())
+        if check_path and not self.get_path():  # i.e., when we try to view/encrypt a story that doesn't exist!
+            print ERROR, "Story doesn't exist on the given day! (%s)" % self._date.date()
         self._key = session.key     # have a copy of the password so that we don't always have to invoke Session
 
     def get_hash(self):
@@ -80,6 +82,8 @@ class Story(object):
 
     def encrypt(self, echo = True):
         '''Encrypts a story (additionally, it checks whether the story has already been encrypted)'''
+        if not self.get_path():
+            return
         try:    # check whether it's already been encrypted (not much overhead for a single file)
             data = self.decrypt()
             print ERROR, "This file looks has already been encrypted! (filename hash: %s)" % self.get_hash(), \
@@ -125,7 +129,7 @@ class Story(object):
                             stamp_idx = prev_data.rfind('[')
                             if stamp_idx == -1: break
                             time = datetime.strptime(prev_data[stamp_idx:(stamp_idx + 21)], '[%Y-%m-%d] %H:%M:%S')
-                            raw_msg = '\n(You were to write something about this day on %B %d, %Y at %l:%M:%S %p)'
+                            raw_msg = '\n(You were to write something about this day on %B %d, %Y at %H:%M:%S %p)'
                             msg = time.strftime(raw_msg)
                             reminder = True
                             break
@@ -176,10 +180,9 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
         '''View the entire story'''
         date_format = self._date.strftime('\nYour story from %B %d, %Y (%A) ...\n')
         try:
-            if self.get_path():
-                data = self.decrypt()
-            else:
-                print ERROR, "Story doesn't exist on the given day! (%s)" % self._date.date()
+            if not self.get_path():
+                return
+            data = self.decrypt()
         except AssertionError:
             print ERROR, "Baaah! Couldn't decrypt the story!"
             return
@@ -190,5 +193,5 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
         end = "<----- END OF STORY ----->"
         if return_text:
             return (data, start, end)
-        sys.stdout.set_mode(2)
+        sys.stdout.set_mode(2, 0.01)
         print start, data, end

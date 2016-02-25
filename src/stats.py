@@ -50,7 +50,7 @@ def stats(session, speed = None, lang = None):
     lang = get_lang(lang)
     word_count = rusty_stats(session) if lang == 'r' else py_stats(session)
     print SUCCESS, fmt_text('There are {:,} words in your diary!'.format(word_count), 'yellow')
-    speed = 30.0 if not speed else float(speed)
+    speed = 20.0 if not speed else float(speed)
     print '\n(Assuming an average typing speed of %s words per minute)...' % int(speed)
     msg = fmt_text("\n  Approximate time you've spent on this diary: %s" , 'blue')
     print msg % fmt_text(time_calc((word_count / speed) * 60), 'green')

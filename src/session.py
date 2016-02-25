@@ -21,6 +21,7 @@ class Session(object):
             warn = False
             if not os.access(path, os.W_OK):
                 print ERROR, "Couldn't get write access to home directory! Checking if the device is Android..."
+                sleep(2)
                 path = '/mnt/sdcard'
                 while not write_access(path):
                     warn = True

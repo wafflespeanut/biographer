@@ -9,11 +9,11 @@ from src.story import Story
 from src.utils import CAPTURE_WAIT, ERROR, SlowPrinter, clear_screen
 
 if __name__ == '__main__':
-    sys.stdout = SlowPrinter()      # hack for printing at variety of rates at certain code points
-    sys.stdout.set_mode(1)
     _name, args = sys.argv[0], map(lambda string: string.strip('-'), sys.argv[1:])
     session = analyse_args(args)
 
+    sys.stdout = SlowPrinter()      # hack for printing at variety of rates at certain code points
+    sys.stdout.set_mode(1)
     while session.loop:     # Main loop (there are a hell lot of `try...except`s for smoother experience)
         try:
             sys.stdout.set_mode(3, 0.03)
@@ -24,13 +24,13 @@ if __name__ == '__main__':
             choices = {     # how the option will be displayed, and its corresponding executable line
                 1: ("Write today's story", 'Story(session, "today").write()'),
                 2: ("Random story", 'random(session)'),
-                3: ("View the story of someday", 'Story(session).view()'),
+                3: ("View the story of someday", 'Story(session, check_path = True).view()'),
                 4: ("Write (or append to) the story of someday", 'Story(session, is_write = True).write()'),
                 5: ("Search your stories", 'search(session)'),
                 6: ("Backup your stories", 'backup(session)'),
                 7: ("Change your password", 'change_pass(session)'),
                 8: ("Reconfigure your diary", 'session.reconfigure()'),
-                9: ("Encrypt an accidentally decrypted story", 'Story(session).encrypt()'),
+                9: ("Encrypt an accidentally decrypted story", 'Story(session, check_path = True).encrypt()'),
                 0: ("View your statistics", 'stats(session)'), }
             for i in range(1, len(choices)) + [0]:
                 print '%s%d. %s' % (' ' * 6, i, choices[i][0])

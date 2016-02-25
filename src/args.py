@@ -1,3 +1,4 @@
+import sys
 from time import sleep
 
 from options import backup, change_pass, random
@@ -5,7 +6,7 @@ from search import search
 from session import Session
 from stats import stats
 from story import Story
-from utils import CAPTURE_WAIT, ERROR, clear_screen
+from utils import CAPTURE_WAIT, ERROR, SlowPrinter, clear_screen
 
 help_string = '''
 USAGE: python /path/to/biographer [OPTIONS]
@@ -46,6 +47,8 @@ search [=word]  Search for a given word (with optional arguments)
 help_string = '\n  '.join(help_string.split('\n'))      # FIXME: this should be a decorator
 
 def create_session():
+    sys.stdout = SlowPrinter()
+    sys.stdout.set_mode(1)
     session = Session()
     if session.loop:
         clear_screen()
@@ -72,9 +75,9 @@ def analyse_args(args):
         'random': 'random(create_session())',
         # these demand one value (`backup` requires a valid location, while the other three require a datetime format)
         'write': 'Story(create_session(), when = value, is_write = True).write()',
-        'view': 'Story(create_session(), when = value).view()',
+        'view': 'Story(create_session(), when = value, check_path = True).view()',
         'backup': 'backup(create_session(), backup_loc = value)',
-        'encrypt': 'Story(create_session(), when = value).encrypt()',
+        'encrypt': 'Story(create_session(), when = value, check_path = True).encrypt()',
     }
 
     try:
