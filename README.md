@@ -1,6 +1,6 @@
 ## Biographer (v0.6.2)
 
-A command-line utility to remember everyday memories. This is an on-going project of mine, and so it's unstable. I play with it during my free time (or whenever I get a new idea)...
+A command-line utility to remember everyday memories. This *was* a project of mine. I played with it during my free time (or whenever I got a new idea)...
 
 ### How it works?
 

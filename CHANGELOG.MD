@@ -1,8 +1,8 @@
 ### Checklist for next versions:
 
 - [x] Statistics for stories
-- [ ] Slow printing!
-- [ ] Parallelize searching (and other time-consuming stuff) in Python
+- [x] Slow printing!
+- [x] Parallelize searching (and other time-consuming stuff) in Python
 - [ ] Timestamp at the start of every story could compromise the cipher! (Idea: Implement AES in Python & Rust)
 - [ ] Persuade the searching functions to help with pretty printing
 - [ ] Update Rust library to change the password
