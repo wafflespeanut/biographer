@@ -9,25 +9,30 @@ from utils import clear_screen, fmt_text, simple_counter
 
 REMINDER = '----- You were about to write something at this time? -----'
 
+
 def get_date():     # global function for getting date from the user in the absence of datetime object
     while True:
         try:
             year = int(raw_input('\nYear: '))
             month = int(raw_input('\nMonth: '))
             day = int(raw_input('\nDay: '))
+
             if datetime(year, month, day) > datetime.now():
                 print ERROR, "Bah! You can't just time-travel into the future!"
                 year, month, day = [None] * 3
                 continue
             return datetime(year, month, day)
+
         except ValueError:
             print ERROR, 'Invalid input! Cannot parse the given date!'
             year, month, day = [None] * 3
+
 
 def hasher(hash_function, text):     # global hashing function (may use MD5 or SHA-256)
     hash_object = hash_function()
     hash_object.update(text)
     return hash_object.hexdigest()
+
 
 class Story(object):
     '''
@@ -49,12 +54,14 @@ class Story(object):
                 raise ValueError
         except ValueError:
             self._date = get_date()
+
         # just in case if you plan to write your past days beyond the birthday
         if is_write and self._date < session.birthday:   # you wouldn't want this when you're viewing!
             print WARNING, "Reconfiguring your diary to include those 'past' days..."
             session.birthday = self._date
             session.write_to_config_file()
             sleep(1)
+
         self._path = os.path.join(session.location, self.get_hash())
         if check_path and not self.get_path():  # i.e., when we try to view/encrypt a story that doesn't exist!
             print ERROR, "Story doesn't exist on the given day! (%s)" % self._date.date()
@@ -84,6 +91,7 @@ class Story(object):
         '''Encrypts a story (additionally, it checks whether the story has already been encrypted)'''
         if not self.get_path():
             return
+
         try:    # check whether it's already been encrypted (not much overhead for a single file)
             data = self.decrypt()
             print ERROR, "This file looks has already been encrypted! (filename hash: %s)" % self.get_hash(), \
@@ -103,6 +111,7 @@ class Story(object):
         '''
         data = zombify('d', self.read_data(), self._key)
         assert data         # checking whether decryption has succeeded
+
         if overwrite:       # we catch the AssertionError later to indicate the wrong password input
             self.write_data(data)
         else:
@@ -114,6 +123,7 @@ class Story(object):
         input_loop, reminder = True, False
         keystroke = 'Ctrl+C'
         sys.stdout.set_mode(2, 0.03)
+
         if sys.platform == 'win32':
             print WARNING, "If you're using the command prompt, don't press %s while writing!" % keystroke
             keystroke = 'Ctrl+Z and [Enter]'
@@ -134,33 +144,38 @@ class Story(object):
                             reminder = True
                             break
                         except ValueError:
-                            continue
+                            pass
+
                 print '\nStory already exists! Appending to the current story...'
                 print '(filename hash: %s)' % self.get_hash()
                 if reminder:
                     print fmt_text(msg, 'yellow')
+
             except AssertionError:
                 print ERROR, "Bleh! Couldn't decrypt today's story! Check your password!"
                 return
 
-        try:    # Step 2: Writing the first paragraph...
+        # Step 2: Writing the first paragraph...
+        try:
             data = [datetime.now().strftime('[%Y-%m-%d] %H:%M:%S\n')]
             stuff = raw_input("\nStart writing... (Once you've written something, press [Enter] to record it \
 to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you're done!)\n\n\t" % keystroke)
             if not stuff:       # quitting on empty return
                 raise KeyboardInterrupt
             data.append(stuff)
+
         except (KeyboardInterrupt, EOFError):   # quitting on Ctrl-C
             sleep(CAPTURE_WAIT)
             print "\nAlright, let's save it for a later time then! Quitting..."
             input_loop = False
             data.append(REMINDER)   # If the user quits before writing, then add a reminder
 
-        # Step 3: Writing loop
+        # Step 3: Writing input loop
         if input_loop and reminder:     # user has written something at this point, remove the reminder (if any)
             self.write_data(prev_data[:stamp_idx])
             # this is necessary, or else we'll ignore the "event" that should be written on top of the reminder
             reminder = False
+
         while input_loop:
             try:
                 stuff = raw_input('\t')     # auto-tabbing of paragraphs (for each [RETURN])
@@ -179,6 +194,7 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
     def view(self, return_text = False):
         '''View the entire story'''
         date_format = self._date.strftime('\nYour story from %B %d, %Y (%A) ...\n')
+
         try:
             if not self.get_path():
                 return
@@ -186,11 +202,13 @@ to the buffer. Further [RETURN] strokes indicate paragraphs. Press %s when you'r
         except AssertionError:
             print ERROR, "Baaah! Couldn't decrypt the story!"
             return
+
         clear_screen()
         count = simple_counter(data)
         start = "%s\n<----- START OF STORY -----> (%d words)\n\n" % \
                 (fmt_text(fmt_text(date_format, 'violet'), 'bold'), count)
         end = "<----- END OF STORY ----->"
+
         if return_text:
             return (data, start, end)
         sys.stdout.set_mode(2, 0.01)

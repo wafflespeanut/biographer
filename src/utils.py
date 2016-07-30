@@ -3,6 +3,11 @@ from datetime import datetime, timedelta
 from time import sleep
 from timeit import default_timer as timer
 
+NEWLINE = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
+CAPTURE_WAIT = (0.1 if sys.platform == 'win32' else 0)
+# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
+STDOUT = sys.stdout
+
 filename = inspect.getframeinfo(inspect.currentframe()).filename    # this sweetsauce should work for all cases
 exec_path = os.path.dirname(os.path.abspath(filename))
 
@@ -12,27 +17,27 @@ rustlib_path = os.path.join(os.path.dirname(exec_path), 'target', 'release', pre
 
 formats = {
     'black': 90, 'red': 91, 'green': 92, 'yellow': 93, 'blue': 94, 'violet': 95, 'skyblue': 96, 'white': 97,
-    'null': 0, 'bold': 1, 'italic': 3, 'underline': 4, 'strike': 9 }
+    'null': 0, 'bold': 1, 'italic': 3, 'underline': 4, 'strike': 9
+}
+
 
 def fmt(color = 'null', dark = False):
     format_code = formats[color] - 60 if dark else formats[color]
     return {'win32': ''}.get(sys.platform, '\033[' + str(format_code) + 'm')
 
+
 def fmt_text(text, formatting, dark = False):
     return '%s%s%s' % (fmt(formatting, dark), text, fmt())
-
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-NEWLINE = ('\n' if sys.platform == 'darwin' else '')        # since OSX uses '\r' for newlines
-CAPTURE_WAIT = (0.1 if sys.platform == 'win32' else 0)
-# the 100ms sleep times is the workaround for catching EOFError properly in Windows since they're asynchronous
-STDOUT = sys.stdout
 
 ERROR, WARNING, SUCCESS = map(lambda s: '\n' + fmt_text(s, 'bold'),
                               (fmt_text('[ERROR]', 'red'),
                                fmt_text('[WARNING]', 'yellow', True),
                                fmt_text('[SUCCESS]', 'green')))
+
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 
 def write_access(path):
     if os.access(path, os.W_OK):
@@ -42,6 +47,7 @@ def write_access(path):
     else:
         print ERROR, "Couldn't get write access to %s" % path
     return False
+
 
 def simple_counter(story_data):   # simple word counter (which ignores the timestamps)
     stamp_count = 0
@@ -54,6 +60,7 @@ def simple_counter(story_data):   # simple word counter (which ignores the times
             except ValueError:
                 pass
     return len(split_data) - stamp_count
+
 
 # NOTE: You'll be needing the Nightly rust for compiling the library
 
@@ -78,6 +85,7 @@ def ffi_channel(list_to_send, mode):
     stop = timer()      # Timer ends here, because we don't wanna include Python's parsing time
     return string_result, (stop - start)
 
+
 def force_input(input_val, input_msg, error, func = lambda s: s):
     # force the user to enter an input (with an optional function to check the given input)
     if not input_val:
@@ -86,6 +94,7 @@ def force_input(input_val, input_msg, error, func = lambda s: s):
             print error
             input_val = func(raw_input(input_msg))
     return input_val
+
 
 def get_lang(lang):
     # get language from user if it's not passsed as a command-line argument
@@ -102,6 +111,7 @@ def get_lang(lang):
         lang = 'p'
     return lang
 
+
 class DateIterator(object):
     '''Tireless generator to provide datetimes along with optional progress display'''
     def __init__(self, date_start, date_end = datetime.now(), progress_msg = '  Progress: %s'):
@@ -112,8 +122,8 @@ class DateIterator(object):
         # The `progress_msg` string should have a '%s' to indicate where the progress should be printed
         self._progress_msg = progress_msg
         self._tail_msg = ''
-        if progress_msg:
-            print   # just to isolate the progress
+        if progress_msg:    # just to isolate the progress
+            print
 
     def __iter__(self):
         return self
@@ -122,6 +132,7 @@ class DateIterator(object):
         idx, date = self._idx, self._date
         self._idx += 1
         self._date += timedelta(1)
+
         if self._progress_msg:
             progress = '%d%% (%d/%d)' % (int((float(idx + 1) / self._bound) * 100), idx, self._bound)
             STDOUT.write('\r%s %s' % (self._progress_msg % progress, self._tail_msg))
@@ -137,6 +148,7 @@ class DateIterator(object):
         '''Send a string to the iterator to append it to the progress'''
         assert type(msg) is str, 'message should be a string!'
         self._tail_msg = msg
+
 
 class SlowPrinter(object):
     '''

@@ -1,5 +1,4 @@
 #![allow(dead_code, unused_imports)]
-
 extern crate libc;
 extern crate rand as random;
 extern crate rustc_serialize as serialize;
@@ -18,14 +17,16 @@ const NUM_JOBS: usize = 4;
 
 // NOTE: You'll be needing the Nightly Rust for compiling this library
 
-#[no_mangle]
 // FFI function just to kill a transferred pointer
-pub extern fn kill_pointer(raw_pointer: *mut c_char) {
-    unsafe { CString::from_raw(raw_pointer) };      // Rust "should" take the ownership back here
-}   // variable goes out of scope here and the C-type string should be destroyed
-
 #[no_mangle]
+pub extern fn kill_pointer(raw_pointer: *mut c_char) {
+    unsafe { CString::from_raw(raw_pointer) };
+    // Rust "should" take the ownership back here
+    // variable goes out of scope here and the C-type string should be destroyed
+}
+
 // FFI function to be called from Python
+#[no_mangle]
 pub extern fn get_stuff(array: *const *const c_char,
                         length: size_t,
                         mode: c_uint) -> *const c_char {
@@ -37,11 +38,13 @@ pub extern fn get_stuff(array: *const *const c_char,
                                         let byte = c_str.to_bytes();
                                         str::from_utf8(byte).unwrap()
                                     }).collect();
+
     // yeah, I blindly trust myself that I send this exact format here just as expected
     let word = match mode as usize {
         1 => Some(stuff.pop().unwrap()),
         _ => None,
     };
+
     let key = stuff.pop().unwrap();
 
     // (I've commented out some of the methods I'd tried)
@@ -94,8 +97,10 @@ pub extern fn get_stuff(array: *const *const c_char,
             true => stuff_per_chunk + 1,
             false => stuff_per_chunk,
         };
+
         let end_idx = start_idx + slice_size;
         let sender = tx.clone();
+
         let handle = thread::spawn(move || {
             let thread_stuff = stuff[start_idx..end_idx]
                                .iter()
@@ -103,6 +108,7 @@ pub extern fn get_stuff(array: *const *const c_char,
                                .collect::<Vec<_>>();
             sender.send(thread_stuff)
         });
+
         start_idx += slice_size;
         handles.push(handle);
     }
@@ -114,31 +120,30 @@ pub extern fn get_stuff(array: *const *const c_char,
 
     // sorting and remapping is necessary for output from threads (because they come in randomly)
     result.sort_by(|&(idx_1, _), &(idx_2, _)| idx_1.cmp(&idx_2));
-    let occurrences: Vec<_> = result
-                              .into_iter()
-                              .map(|(_, string)| string)
-                              .collect();
-
+    let occurrences: Vec<_> = result.into_iter().map(|(_, string)| string).collect();
     let count_string = occurrences.join(" ");
-    CString::new(count_string).unwrap().into_raw()      // FFI "should" now own the memory
+
+    // FFI "should" now own the memory
+    CString::new(count_string).unwrap().into_raw()
 }
 
 // Gives a tuple of a file's size and a vector of its contents
 fn fopen(path: &str) -> (usize, Vec<u8>) {
-    let file = File::open(path);
-    let mut contents: Vec<u8> = Vec::new();
+    let mut file = File::open(path).unwrap();
+    let mut contents = Vec::new();
     // of course, assuming that there won't be any problem in reading the file
-    let file_size = file.unwrap().read_to_end(&mut contents).unwrap();
+    let file_size = file.read_to_end(&mut contents).unwrap();
     (file_size, contents)
 }
 
-// Checks if the big vector contains the small vector slice and returns a string of indices
+// Checks if the vector contains the slice and returns a string of indices
 fn search(text_vec: &[u8], word: &str) -> String {
     // We're safe here, because we've already filtered the "failure" case
     let mut text = &*(String::from_utf8_lossy(text_vec));
     let mut indices = Vec::new();
     let mut idx = 0;
     let (limit, jump) = (text.len() - 1, word.len());
+
     while let Some(i) = text.find(word) {       // FIXME: I don't think this is efficient
         idx += i;
         indices.push(idx.to_string());
@@ -148,6 +153,7 @@ fn search(text_vec: &[u8], word: &str) -> String {
             false => text = &text[(i + jump)..],
         }
     }
+
     match indices.is_empty() {
         true => "0".to_owned(),
         false => indices.join(":"),
@@ -162,7 +168,9 @@ fn count(text_vec: &[u8]) -> String {
                     .fold(0, |count, word| {
                         if word.starts_with("[") && word.ends_with("]") && word.len() == 12 {
                             extra += 2;     // count the timestamps
-                        } count + 1
+                        }
+
+                        count + 1
                     });
     format!("{}", (count - extra))
 }

@@ -8,16 +8,21 @@ from story import Story, hasher
 from utils import CAPTURE_WAIT, ERROR, SUCCESS, WARNING
 from utils import DateIterator, clear_screen, write_access
 
+
 def random(session):    # useful only when you have a lot of stories (obviously)
     days = range((datetime.now() - session.birthday).days + 1)
-    for i in range(10):     # try 10 times
+
+    for i in range(25):     # try 25 times
         _story_exists, date = session.find_stories(session.birthday + timedelta(rchoice(days)))
         if not date:
             break
+
         story = Story(session, date)
         if story.get_path():
             return story.view()
-    print ERROR, 'Looks like there are no stories in the given location!'
+
+    print ERROR, "Looks like you don't have much stories in the given location!"
+
 
 def backup(session, backup_loc = None):
     try:
@@ -32,6 +37,7 @@ def backup(session, backup_loc = None):
         if os.path.exists(abs_path + '.zip'):
             os.remove(abs_path + '.zip')
 
+
 def change_pass(session, is_arg = False):
     clear_screen()
     old_key, old_loc = session.key[:], session.location[:]
@@ -41,10 +47,12 @@ def change_pass(session, is_arg = False):
         print "\nLet's change your password..."
         temp_name = 'BIOGRAPHER_' + str(randgen())[2:]
         temp_loc = os.path.join(os.path.dirname(session.location.rstrip(os.sep)), temp_name)
+
         # If we're changing the password through command, then there's no reason for asking the existing one twice!
         key_hash = None if is_arg else hasher(sha256, old_key)
         session.get_pass(key_hash, check_against = old_key)
         new_key = session.key[:]
+
         while True:
             try:
                 print WARNING, 'Copying your stories to a temporary working directory (%s)...' % temp_loc
@@ -65,6 +73,7 @@ def change_pass(session, is_arg = False):
             story_old = Story(session, day)
             session.key = new_key
             story_new = Story(session, day)
+
             try:
                 if story_old.get_path():
                     story_old.decrypt(overwrite = True)     # well, both are working on the same file really!

@@ -8,6 +8,7 @@ from stats import stats
 from story import Story
 from utils import CAPTURE_WAIT, ERROR, SlowPrinter, clear_screen
 
+
 help_string = '''
 USAGE: python /path/to/biographer [OPTIONS]
 
@@ -46,20 +47,24 @@ search [=word]  Search for a given word (with optional arguments)
 
 help_string = '\n  '.join(help_string.split('\n'))      # FIXME: this should be a decorator
 
+
 def create_session():
     sys.stdout = SlowPrinter()
     sys.stdout.set_mode(1)
     session = Session()
+
     if session.loop:
         clear_screen()
         return session
     exit('\nGoodbye...\n')
+
 
 def split_arg(arg):
     thing = arg.split('=')
     opt, val = thing[0], thing[1] if len(thing) == 2 else None
     val = None if val and val.lower() in ['none', '""', "''"] else val
     return opt, val
+
 
 def analyse_args(args):
     try:
@@ -100,6 +105,7 @@ def analyse_args(args):
         else:
             exec(allowed_opts[option])
         exit('')
+
     except KeyError:
         print ERROR, 'Invalid arguments! Continuing with the default...'
         return create_session()
